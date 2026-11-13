@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unity Games 2026 Volleyball: Live Scores</title>
+<style>
+  :root { --navy:#1e4f77; --ink:#1d2730; --muted:#5d6b78; --line:#d9e1e8; --bg:#f4f7fa; --ok:#2e8b57; --warn:#b26a00; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family: Arial, Helvetica, sans-serif; color:var(--ink); background:var(--bg); }
+  header { background:var(--navy); color:#fff; padding:20px 16px; }
+  header h1 { margin:0 0 4px; font-size:22px; }
+  header p { margin:0; opacity:.9; font-size:14px; }
+  .status { display:inline-block; margin-top:10px; font-size:13px; padding:4px 10px; border-radius:12px; background:rgba(255,255,255,.15); }
+  .dot { display:inline-block; width:9px; height:9px; border-radius:50%; background:#9bd1ff; margin-right:6px; vertical-align:middle; }
+  .dot.ok { background:#7ee2a8; }
+  .dot.err { background:#ffb38a; }
+  main { max-width:960px; margin:0 auto; padding:16px; }
+  section { background:#fff; border:1px solid var(--line); border-radius:8px; padding:16px; margin-bottom:16px; }
+  h2 { margin:0 0 12px; font-size:18px; color:var(--navy); }
+  h3 { margin:16px 0 8px; font-size:15px; }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); }
+  th { font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+  td.num, th.num { text-align:right; }
+  .win { font-weight:bold; color:var(--ok); }
+  .score { font-variant-numeric:tabular-nums; white-space:nowrap; font-weight:bold; }
+  .pending { color:var(--muted); }
+  .yes { color:var(--ok); font-weight:bold; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .champ { background:#eef6ee; border:1px solid #c9e4cc; border-radius:8px; padding:12px; margin-top:8px; }
+  .champ strong { color:var(--ok); }
+  .banner { display:none; background:#fff4e5; color:var(--warn); border:1px solid #f1d3a2; border-radius:8px; padding:10px 12px; margin-bottom:16px; font-size:14px; }
+  .banner.show { display:block; }
+  .timeline { list-style:none; padding:0; margin:0; }
+  .timeline li { display:flex; gap:12px; padding:6px 0; border-bottom:1px solid var(--line); font-size:14px; }
+  .timeline li span:first-child { min-width:78px; font-weight:bold; color:var(--navy); }
+  footer { text-align:center; color:var(--muted); font-size:12px; padding:8px 16px 24px; }
+  @media (max-width:700px) {
+    .grid { grid-template-columns:1fr; }
+    table { font-size:13px; }
+    th, td { padding:6px 4px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Unity Games 2026 Volleyball</h1>
+  <p>Sunday, November 15, 2026 &middot; Milpitas Sports Center</p>
+  <span class="status"><span class="dot" id="dot"></span><span id="status">Loading scores...</span></span>
+</header>
+
+<main>
+  <div class="banner" id="banner">Couldn't load the latest scores. Retrying every 30 seconds.</div>
+
+  <section>
+    <h2>Program</h2>
+    <ul class="timeline">
+      <li><span>3:30 PM</span><span>Setup in lobby</span></li>
+      <li><span>5:00 PM</span><span>Registration</span></li>
+      <li><span>6:00 PM</span><span>Enter gym, opening remarks, oathtaking, prayer</span></li>
+      <li><span>6:20 PM</span><span>Warm-ups</span></li>
+      <li><span>6:30 PM</span><span>Games begin</span></li>
+      <li><span>8:30 PM</span><span>Finals: Men's on Court 1, Women's on Court 3</span></li>
+      <li><span>9:15 PM</span><span>Awards</span></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Finals and champions</h2>
+    <div class="grid">
+      <div>
+        <h3>Men's final</h3>
+        <div id="final-men">Waiting for pool play to finish.</div>
+        <div class="champ" id="champ-men" style="display:none"></div>
+      </div>
+      <div>
+        <h3>Women's final</h3>
+        <div id="final-women">Waiting for pool play to finish.</div>
+        <div class="champ" id="champ-women" style="display:none"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Standings</h2>
+    <div class="grid">
+      <div>
+        <h3>Men</h3>
+        <table>
+          <thead><tr><th>#</th><th>Team</th><th class="num">W</th><th class="num">L</th><th class="num">Pts for</th><th>Adv</th></tr></thead>
+          <tbody id="standings-men"></tbody>
+        </table>
+      </div>
+      <div>
+        <h3>Women</h3>
+        <table>
+          <thead><tr><th>#</th><th>Team</th><th class="num">W</th><th class="num">L</th><th class="num">Pts for</th><th>Adv</th></tr></thead>
+          <tbody id="standings-women"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>All games</h2>
+    <table>
+      <thead><tr><th>Time</th><th>Court</th><th>Division</th><th>Teams</th><th class="num">Score</th></tr></thead>
+      <tbody id="games"></tbody>
+    </table>
+  </section>
+</main>
+
+<footer>Scores refresh automatically every 30 seconds. Scorekeepers enter results in the official scoring sheet.</footer>
+
+<script>
+(function () {
+  var SHEET_ID = "1x9F4G9pZ0RwykEYGzAyOmAt4AyvB1qwtvKRnBejMT-o";
+  var REFRESH_MS = 30000;
+
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  // Read one tab from the sheet as an array of rows of display strings.
+  function readTab(name) {
+    var url = "https://docs.google.com/spreadsheets/d/" + SHEET_ID +
+      "/gviz/tq?tqx=out:json&headers=0&sheet=" + encodeURIComponent(name);
+    return fetch(url, { cache: "no-store" })
+      .then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.text();
+      })
+      .then(function (text) {
+        var json = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1));
+        return json.table.rows.map(function (row) {
+          return (row.c || []).map(function (cell) {
+            if (!cell) return "";
+            if (cell.f != null) return String(cell.f);
+            return cell.v == null ? "" : String(cell.v);
+          });
+        });
+      });
+  }
+
+  function isWin(winner, team) {
+    return winner && team && winner === team;
+  }
+
+  function renderGames(rows) {
+    // Schedule game rows: [Time, Court, Division, Stage, Team A, Team B, Score A, Score B, Winner]
+    var games = rows.filter(function (r) {
+      return (r[2] === "Men" || r[2] === "Women") && (r[3] === "Pool" || r[3] === "Final");
+    });
+    var html = games.map(function (g) {
+      var score = g[6] !== "" && g[7] !== ""
+        ? esc(g[6]) + " &ndash; " + esc(g[7])
+        : '<span class="pending">Not yet played</span>';
+      var a = isWin(g[8], g[4]) ? '<span class="win">' + esc(g[4]) + "</span>" : esc(g[4]);
+      var b = isWin(g[8], g[5]) ? '<span class="win">' + esc(g[5]) + "</span>" : esc(g[5]);
+      return "<tr><td>" + esc(g[0]) + "</td><td>" + esc(g[1]) + "</td><td>" +
+        esc(g[2]) + (g[3] === "Final" ? " final" : "") + "</td><td>" + a + " vs " + b +
+        '</td><td class="num score">' + score + "</td></tr>";
+    });
+    document.getElementById("games").innerHTML = html.join("");
+  }
+
+  function renderStandings(rows) {
+    // Leaderboard: MEN header, then rows with [Place, Team, W, L, Ties, Pts for, Pts against, Advances]
+    var division = null;
+    var men = [], women = [];
+    rows.forEach(function (r) {
+      if (r[0] === "MEN") { division = "men"; return; }
+      if (r[0] === "WOMEN") { division = "women"; return; }
+      if (!division || !/^\d+$/.test(r[0]) || r[1] === "") return;
+      (division === "men" ? men : women).push(r);
+    });
+    function table(list) {
+      if (!list.length) return '<tr><td colspan="6" class="pending">No teams yet</td></tr>';
+      return list.map(function (r) {
+        return "<tr><td>" + esc(r[0]) + "</td><td>" + esc(r[1]) + '</td><td class="num">' +
+          esc(r[2]) + '</td><td class="num">' + esc(r[3]) + '</td><td class="num">' + esc(r[5]) +
+          "</td><td>" + (r[7] === "Yes" ? '<span class="yes">Yes</span>' : "") + "</td></tr>";
+      }).join("");
+    }
+    document.getElementById("standings-men").innerHTML = table(men);
+    document.getElementById("standings-women").innerHTML = table(women);
+  }
+
+  function renderBracket(rows) {
+    // Bracket finals table: [Division, Seed 1, Seed 2, Final A, Final B, Winner, Locales]
+    ["Men", "Women"].forEach(function (div) {
+      var key = div.toLowerCase();
+      var r = rows.filter(function (x) { return x[0] === div; })[0];
+      var finalEl = document.getElementById("final-" + key);
+      var champEl = document.getElementById("champ-" + key);
+      if (!r || !r[3] || !r[4]) {
+        finalEl.textContent = "Waiting for pool play to finish.";
+        champEl.style.display = "none";
+        return;
+      }
+      finalEl.innerHTML = "<strong>" + esc(r[3]) + "</strong><br>vs<br><strong>" + esc(r[4]) + "</strong>";
+      if (r[5] && r[5] !== "Not yet decided") {
+        champEl.style.display = "block";
+        champEl.innerHTML = "Champion: <strong>" + esc(r[5]) + "</strong>";
+      } else {
+        champEl.style.display = "none";
+      }
+    });
+  }
+
+  function setStatus(ok, text) {
+    document.getElementById("dot").className = "dot " + (ok ? "ok" : "err");
+    document.getElementById("status").textContent = text;
+  }
+
+  function refresh() {
+    Promise.all([readTab("Schedule"), readTab("Leaderboard"), readTab("Bracket")])
+      .then(function (results) {
+        renderGames(results[0]);
+        renderStandings(results[1]);
+        renderBracket(results[2]);
+        document.getElementById("banner").classList.remove("show");
+        var t = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" });
+        setStatus(true, "Live · updated " + t);
+      })
+      .catch(function () {
+        document.getElementById("banner").classList.add("show");
+        setStatus(false, "Scores unavailable, retrying");
+      });
+  }
+
+  refresh();
+  setInterval(refresh, REFRESH_MS);
+})();
+</script>
+</body>
+</html>

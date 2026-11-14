@@ -52,6 +52,19 @@
   .sheet-item small { display:block; color:var(--muted); }
   .btn { background:var(--navy); color:#fff; border:0; border-radius:5px; padding:7px 10px; font-size:12px; cursor:pointer; white-space:nowrap; }
   .btn:hover { opacity:.9; }
+
+  /* Live score animations */
+  @keyframes flashbg { 0% { background:#fff1a8; } 100% { background:transparent; } }
+  @keyframes pop { 0% { transform:scale(1); } 30% { transform:scale(1.4); background:#ffe066; color:#111; border-radius:4px; } 100% { transform:scale(1); } }
+  @keyframes livepulse { 0% { box-shadow:0 0 0 0 rgba(224,48,42,.6); } 70% { box-shadow:0 0 0 8px rgba(224,48,42,0); } 100% { box-shadow:0 0 0 0 rgba(224,48,42,0); } }
+  @keyframes slidein { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:none; } }
+  .flash td, tr.flash td, td.flash { animation: flashbg 3s ease-out 1; }
+  .ttotal.bump { display:inline-block; animation: pop .9s ease-out 1; border-radius:4px; }
+  .live-dot { width:9px; height:9px; border-radius:50%; background:#e0302a; display:inline-block; margin-right:8px; vertical-align:middle; animation: livepulse 1.4s infinite; }
+  ul.feed { list-style:none; margin:0; padding:0; }
+  ul.feed li { padding:7px 0; border-bottom:1px solid var(--line); font-size:14px; animation: slidein .4s ease-out; }
+  ul.feed li .t { color:var(--muted); font-size:12px; margin-right:8px; font-variant-numeric:tabular-nums; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; } }
   .slot-team { font-size:12px; font-weight:bold; line-height:1.3; margin-top:3px; }
   .slot-vs { font-size:10px; color:var(--muted); text-transform:uppercase; }
   .swatch { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; vertical-align:middle; border:1px solid rgba(0,0,0,.25); }
@@ -100,6 +113,11 @@
 </header>
 
 <main>
+  <section id="feed-section">
+    <h2><span class="live-dot"></span>Live updates</h2>
+    <ul class="feed" id="feed"><li class="pending">Score changes will appear here as they're entered.</li></ul>
+  </section>
+
   <div class="banner" id="banner">Couldn't load the latest scores. Retrying every 30 seconds.</div>
 
   <section>
@@ -232,7 +250,7 @@
         : '<span class="pending">Not yet played</span>';
       var a = g[8] === g[4] ? '<span class="win">' + esc(g[4]) + "</span>" : esc(g[4]);
       var b = g[8] === g[5] ? '<span class="win">' + esc(g[5]) + "</span>" : esc(g[5]);
-      return "<tr><td>" + esc(g[0]) + "</td><td>" + esc(g[1]) + "</td><td>" +
+      return '<tr data-k="' + esc(gameKey(g)) + '"><td>' + esc(g[0]) + "</td><td>" + esc(g[1]) + "</td><td>" +
         esc(g[2]) + (g[3] === "Final" ? " final" : "") + "</td><td>" + a + " vs " + b +
         '</td><td class="num score">' + score + "</td></tr>";
     }).join("");
@@ -270,7 +288,7 @@
         var scoreLine = played
           ? '<div class="slot-score">' + esc(g[6]) + " &ndash; " + esc(g[7]) + "</div>"
           : "";
-        return '<td class="' + (isFinal ? "slot-final" : "") + '">' +
+        return '<td data-k="' + esc(gameKey(g)) + '" class="' + (isFinal ? "slot-final" : "") + '">' +
           '<div class="slot-div">' + esc(g[2]) + (isFinal ? " final" : "") + "</div>" +
           '<div class="slot-team">' + swatch(g[4]) + esc(code(g[4])) + " " + esc(shortName(g[4])) + "</div>" +
           '<div class="slot-vs">vs</div>' +
@@ -352,7 +370,7 @@
             esc(mine) + " &ndash; " + esc(theirs) + (g[8] === a ? " W" : " L") + "</span>";
         return '<li><span class="opp">vs ' + esc(code(opp)) + " " + esc(shortName(opp)) + "</span>" + res + "</li>";
       }).join("");
-      return '<div class="team-card">' +
+      return '<div class="team-card" data-team="' + esc(a) + '">' +
         '<div class="card-head" style="background:' + color + '">' +
           '<div><div class="tcode">' + esc(code(a)) + '</div><div class="tname">' + esc(shortName(a)) + "</div></div>" +
           '<div class="ttotal">' + esc(row[5]) + " pts</div>" +
@@ -411,6 +429,71 @@
   }
 
   var GAMES = [];
+  var lastScores = null, lastPoints = null, feedItems = [];
+
+  function gameKey(g) { return [g[0], g[1], g[2], g[3], g[4], g[5]].join("|"); }
+
+  function flashGame(k) {
+    document.querySelectorAll("[data-k]").forEach(function (el) {
+      if (el.getAttribute("data-k") !== k) return;
+      el.classList.remove("flash");
+      void el.offsetWidth;
+      el.classList.add("flash");
+      setTimeout(function () { el.classList.remove("flash"); }, 3100);
+    });
+  }
+
+  function bumpTeam(name) {
+    document.querySelectorAll("[data-team]").forEach(function (el) {
+      if (el.getAttribute("data-team") !== name) return;
+      var t = el.querySelector(".ttotal");
+      if (!t) return;
+      t.classList.remove("bump");
+      void t.offsetWidth;
+      t.classList.add("bump");
+      setTimeout(function () { t.classList.remove("bump"); }, 1000);
+    });
+  }
+
+  function addFeed(text) {
+    var t = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    feedItems.unshift({ t: t, text: text });
+    feedItems = feedItems.slice(0, 8);
+    document.getElementById("feed").innerHTML = feedItems.map(function (f) {
+      return '<li><span class="t">' + esc(f.t) + "</span>" + f.text + "</li>";
+    }).join("");
+  }
+
+  // Compare this refresh with the last one: highlight changed games, announce points, bump team totals.
+  // The first load only records the baseline, so nothing animates on page open.
+  function animateChanges(games, split) {
+    var scores = {}, points = {};
+    games.forEach(function (g) { scores[gameKey(g)] = [g[6], g[7]]; });
+    ["men", "women"].forEach(function (k) {
+      split[k].forEach(function (r) { points[r[1]] = String(r[5]); });
+    });
+    if (lastScores) {
+      games.forEach(function (g) {
+        var k = gameKey(g), now = scores[k], was = lastScores[k];
+        if (!was || now[0] === "" || now[1] === "") return;
+        if (now[0] === was[0] && now[1] === was[1]) return;
+        flashGame(k);
+        var scorer = "";
+        if (Number(now[0]) > Number(was[0] || 0)) scorer = g[4];
+        else if (Number(now[1]) > Number(was[1] || 0)) scorer = g[5];
+        var line = scorer
+          ? "<strong>" + esc(code(scorer)) + " " + esc(shortName(scorer)) + "</strong> scored. "
+          : "";
+        addFeed(line + esc(code(g[4])) + " " + esc(now[0]) + " &ndash; " + esc(now[1]) + " " + esc(code(g[5])) +
+          " (" + esc(g[2]) + (g[3] === "Final" ? " final" : "") + ", " + esc(g[1]) + ")");
+      });
+      Object.keys(points).forEach(function (t) {
+        if (lastPoints[t] !== undefined && lastPoints[t] !== points[t]) bumpTeam(t);
+      });
+    }
+    lastScores = scores;
+    lastPoints = points;
+  }
 
   // Printable score sheet, filled from one Schedule row. Player lines are left blank for handwriting.
   function sheetHtml(g) {
@@ -486,6 +569,7 @@
         renderCourtSchedule(games, split);
         renderGames(games);
         renderSheetList(games);
+        animateChanges(games, split);
         renderDivision("men", "Men", games, split.men, results[2], colors);
         renderDivision("women", "Women", games, split.women, results[2], colors);
         document.getElementById("banner").classList.remove("show");

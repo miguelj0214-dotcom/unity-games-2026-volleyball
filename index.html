@@ -32,22 +32,25 @@
   .timeline li { display:flex; gap:12px; padding:6px 0; border-bottom:1px solid var(--line); font-size:14px; }
   .timeline li span:first-child { min-width:78px; font-weight:bold; color:var(--navy); }
   footer { text-align:center; color:var(--muted); font-size:12px; padding:8px 16px 24px; }
-  .legend { display:flex; flex-wrap:wrap; gap:10px; font-size:12px; color:var(--muted); margin:0 0 10px; }
+  .legend { display:flex; flex-wrap:wrap; gap:10px; font-size:12px; color:var(--muted); margin:0 0 12px; }
   .legend span { display:inline-flex; align-items:center; gap:5px; }
   .legend i { display:inline-block; width:12px; height:12px; border-radius:3px; }
 
-  /* Round-robin score grid */
-  .gridwrap { overflow-x:auto; }
-  table.pool { width:auto; min-width:100%; font-size:13px; }
-  table.pool th, table.pool td { border:1px solid var(--line); text-align:center; padding:8px 6px; white-space:nowrap; }
-  table.pool th { text-transform:none; letter-spacing:0; font-size:12px; color:var(--ink); }
-  table.pool th.rowhead { text-align:left; color:#fff; font-size:13px; font-weight:bold; border-color:transparent; }
-  table.pool td.total { font-weight:bold; font-size:15px; font-variant-numeric:tabular-nums; background:#f7f9fb; }
-  table.pool td.cell { font-variant-numeric:tabular-nums; font-weight:bold; }
-  table.pool td.won { background:#e7f4ec; color:var(--ok); }
-  table.pool td.lost { background:#f8ecea; color:var(--lost); }
-  table.pool td.open { color:#aab4bf; font-weight:normal; }
-  table.pool td.diag { background:#eef2f6; }
+  /* Team cards for pool play */
+  .cards { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:12px; }
+  .team-card { border:1px solid var(--line); border-radius:8px; overflow:hidden; background:#fff; }
+  .card-head { color:#fff; padding:10px 12px; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .card-head .tcode { font-size:12px; opacity:.85; }
+  .card-head .tname { font-weight:bold; font-size:14px; line-height:1.25; }
+  .card-head .ttotal { font-size:20px; font-weight:bold; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .card-sub { font-size:12px; color:var(--muted); padding:6px 12px; background:#f7f9fb; border-top:1px solid var(--line); }
+  ul.games { list-style:none; margin:0; padding:0; }
+  ul.games li { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:8px 12px; border-top:1px solid var(--line); font-size:13px; }
+  ul.games .opp { color:var(--ink); }
+  ul.games .res { font-variant-numeric:tabular-nums; white-space:nowrap; }
+  ul.games .res.won { color:var(--ok); font-weight:bold; }
+  ul.games .res.lost { color:var(--lost); font-weight:bold; }
+  ul.games .res.open { color:#aab4bf; }
 
   /* Final and champion */
   .bracket { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
@@ -65,6 +68,7 @@
   @media (max-width:700px) {
     table { font-size:13px; }
     th, td { padding:6px 4px; }
+    .cards { grid-template-columns:1fr; }
   }
 </style>
 </head>
@@ -204,36 +208,34 @@
     return map;
   }
 
-  // Round-robin grid: team (shirt color), total points, each pairing's score from the row
-  // team's side, and wins-losses.
-  function poolGrid(teamRows, poolGames, colors) {
+  // One card per team: shirt-color header with the total points, the record, and
+  // every pool game with the opponent and the team's score.
+  function teamCards(teamRows, poolGames, colors) {
     if (!teamRows.length) return '<p class="pending">Teams appear once the sheet is set up.</p>';
-    var teams = teamRows.map(function (r) { return r[1]; });
-    var head = "<tr><th>Team</th><th>Total pts</th>" + teams.map(function (t) {
-      return '<th title="' + esc(t) + '">' + esc(code(t)) + "</th>";
-    }).join("") + "<th>W&ndash;L</th></tr>";
-    var body = teamRows.map(function (row) {
+    return '<div class="cards">' + teamRows.map(function (row) {
       var a = row[1];
       var color = shirtCss(colors[a]);
-      var cells = teams.map(function (b) {
-        if (a === b) return '<td class="diag"></td>';
-        var g = poolGames.filter(function (x) {
-          return (x[4] === a && x[5] === b) || (x[4] === b && x[5] === a);
-        })[0];
-        if (!g || g[6] === "" || g[7] === "") return '<td class="cell open">&ndash;</td>';
+      var games = poolGames.filter(function (x) { return x[4] === a || x[5] === a; });
+      var items = games.map(function (g) {
+        var opp = g[4] === a ? g[5] : g[4];
+        var played = g[6] !== "" && g[7] !== "";
         var mine = g[4] === a ? g[6] : g[7];
         var theirs = g[4] === a ? g[7] : g[6];
-        var cls = g[8] === a ? "won" : "lost";
-        return '<td class="cell ' + cls + '">' + esc(mine) + " &ndash; " + esc(theirs) + "</td>";
+        var res = !played
+          ? '<span class="res open">Not yet played</span>'
+          : '<span class="res ' + (g[8] === a ? "won" : "lost") + '">' +
+            esc(mine) + " &ndash; " + esc(theirs) + (g[8] === a ? " W" : " L") + "</span>";
+        return '<li><span class="opp">vs ' + esc(code(opp)) + " " + esc(shortName(opp)) + "</span>" + res + "</li>";
       }).join("");
-      return '<tr><th class="rowhead" style="background:' + color + '">' +
-        esc(code(a)) + " " + esc(shortName(a)) + "</th>" +
-        '<td class="total">' + esc(row[5]) + "</td>" + cells +
-        "<td><strong>" + esc(row[2]) + "&ndash;" + esc(row[3]) + "</strong></td></tr>";
-    }).join("");
-    return '<div class="legend">' + legendFor(teamRows, colors) + "</div>" +
-      '<div class="gridwrap"><table class="pool"><thead>' + head +
-      "</thead><tbody>" + body + "</tbody></table></div>";
+      return '<div class="team-card">' +
+        '<div class="card-head" style="background:' + color + '">' +
+          '<div><div class="tcode">' + esc(code(a)) + '</div><div class="tname">' + esc(shortName(a)) + "</div></div>" +
+          '<div class="ttotal">' + esc(row[5]) + " pts</div>" +
+        "</div>" +
+        '<div class="card-sub">Record ' + esc(row[2]) + "&ndash;" + esc(row[3]) + "</div>" +
+        '<ul class="games">' + items + "</ul>" +
+      "</div>";
+    }).join("") + "</div>";
   }
 
   // Legend lists each shirt color that appears in this division, once.
@@ -276,8 +278,9 @@
     var finalGame = games.filter(function (g) { return g[2] === div && g[3] === "Final"; })[0];
     var bracketRow = bracketRows.filter(function (x) { return x[0] === div; })[0];
     document.getElementById(key + "-bracket").innerHTML =
+      '<div class="legend">' + legendFor(teamRows, colors) + "</div>" +
       "<h3>Pool play: top 2 by wins, then points, advance to the final</h3>" +
-      poolGrid(teamRows, poolGames, colors) +
+      teamCards(teamRows, poolGames, colors) +
       "<h3>Final</h3>" +
       finalBlock(bracketRow, finalGame);
   }

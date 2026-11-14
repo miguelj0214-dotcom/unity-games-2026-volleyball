@@ -32,12 +32,17 @@
   .timeline li { display:flex; gap:12px; padding:6px 0; border-bottom:1px solid var(--line); font-size:14px; }
   .timeline li span:first-child { min-width:78px; font-weight:bold; color:var(--navy); }
   footer { text-align:center; color:var(--muted); font-size:12px; padding:8px 16px 24px; }
+  .legend { display:flex; flex-wrap:wrap; gap:10px; font-size:12px; color:var(--muted); margin:0 0 10px; }
+  .legend span { display:inline-flex; align-items:center; gap:5px; }
+  .legend i { display:inline-block; width:12px; height:12px; border-radius:3px; }
 
   /* Round-robin score grid */
   .gridwrap { overflow-x:auto; }
   table.pool { width:auto; min-width:100%; font-size:13px; }
   table.pool th, table.pool td { border:1px solid var(--line); text-align:center; padding:8px 6px; white-space:nowrap; }
-  table.pool th.rowhead { text-align:left; text-transform:none; letter-spacing:0; color:var(--ink); font-size:13px; font-weight:bold; }
+  table.pool th { text-transform:none; letter-spacing:0; font-size:12px; color:var(--ink); }
+  table.pool th.rowhead { text-align:left; color:#fff; font-size:13px; font-weight:bold; border-color:transparent; }
+  table.pool td.total { font-weight:bold; font-size:15px; font-variant-numeric:tabular-nums; background:#f7f9fb; }
   table.pool td.cell { font-variant-numeric:tabular-nums; font-weight:bold; }
   table.pool td.won { background:#e7f4ec; color:var(--ok); }
   table.pool td.lost { background:#f8ecea; color:var(--lost); }
@@ -112,6 +117,16 @@
   var SHEET_ID = "1x9F4G9pZ0RwykEYGzAyOmAt4AyvB1qwtvKRnBejMT-o";
   var REFRESH_MS = 30000;
 
+  // Shirt colors as they appear in the Teams tab, "Uniform color" column.
+  var SHIRT = {
+    "navy blue": "#1f2a5a",
+    "royal blue": "#2857c7",
+    "black": "#111111",
+    "maroon": "#6d1a2a",
+    "gray": "#7d848d",
+    "grey": "#7d848d"
+  };
+
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
@@ -121,6 +136,7 @@
   // Team code is the first word of the team name, such as "M1" or "W3".
   function code(name) { return String(name || "").split(" ")[0]; }
   function shortName(name) { return String(name || "").replace(/^\S+\s*/, ""); }
+  function shirtCss(color) { return SHIRT[String(color || "").trim().toLowerCase()] || "#5d6b78"; }
 
   // Read one tab from the sheet as an array of rows of display strings.
   function readTab(name) {
@@ -179,15 +195,26 @@
     return out;
   }
 
-  // Round-robin grid: each cell is the score of that pairing, from the row team's side.
-  function poolGrid(teamRows, poolGames) {
+  // Teams rows: [Division, Team, Locales, Uniform color, ...]. Map team name to shirt color.
+  function shirtColors(rows) {
+    var map = {};
+    rows.forEach(function (r) {
+      if (r[1] && r[3] && r[1] !== "Team") map[r[1]] = r[3];
+    });
+    return map;
+  }
+
+  // Round-robin grid: team (shirt color), total points, each pairing's score from the row
+  // team's side, and wins-losses.
+  function poolGrid(teamRows, poolGames, colors) {
     if (!teamRows.length) return '<p class="pending">Teams appear once the sheet is set up.</p>';
     var teams = teamRows.map(function (r) { return r[1]; });
-    var head = "<tr><th></th>" + teams.map(function (t) {
+    var head = "<tr><th>Team</th><th>Total pts</th>" + teams.map(function (t) {
       return '<th title="' + esc(t) + '">' + esc(code(t)) + "</th>";
     }).join("") + "<th>W&ndash;L</th></tr>";
     var body = teamRows.map(function (row) {
       var a = row[1];
+      var color = shirtCss(colors[a]);
       var cells = teams.map(function (b) {
         if (a === b) return '<td class="diag"></td>';
         var g = poolGames.filter(function (x) {
@@ -199,11 +226,26 @@
         var cls = g[8] === a ? "won" : "lost";
         return '<td class="cell ' + cls + '">' + esc(mine) + " &ndash; " + esc(theirs) + "</td>";
       }).join("");
-      return '<tr><th class="rowhead">' + esc(code(a)) + " " + esc(shortName(a)) + "</th>" + cells +
+      return '<tr><th class="rowhead" style="background:' + color + '">' +
+        esc(code(a)) + " " + esc(shortName(a)) + "</th>" +
+        '<td class="total">' + esc(row[5]) + "</td>" + cells +
         "<td><strong>" + esc(row[2]) + "&ndash;" + esc(row[3]) + "</strong></td></tr>";
     }).join("");
-    return '<div class="gridwrap"><table class="pool"><thead>' + head +
+    return '<div class="legend">' + legendFor(teamRows, colors) + "</div>" +
+      '<div class="gridwrap"><table class="pool"><thead>' + head +
       "</thead><tbody>" + body + "</tbody></table></div>";
+  }
+
+  // Legend lists each shirt color that appears in this division, once.
+  function legendFor(teamRows, colors) {
+    var seen = {}, out = [];
+    teamRows.forEach(function (r) {
+      var name = colors[r[1]];
+      if (!name || seen[name]) return;
+      seen[name] = true;
+      out.push('<span><i style="background:' + shirtCss(name) + '"></i>' + esc(name) + "</span>");
+    });
+    return out.join("");
   }
 
   // Final match and champion box, from the Bracket tab and the Final row on Schedule.
@@ -229,13 +271,13 @@
       "</div>";
   }
 
-  function renderDivision(key, div, games, teamRows, bracketRows) {
+  function renderDivision(key, div, games, teamRows, bracketRows, colors) {
     var poolGames = games.filter(function (g) { return g[2] === div && g[3] === "Pool"; });
     var finalGame = games.filter(function (g) { return g[2] === div && g[3] === "Final"; })[0];
     var bracketRow = bracketRows.filter(function (x) { return x[0] === div; })[0];
     document.getElementById(key + "-bracket").innerHTML =
       "<h3>Pool play: top 2 by wins, then points, advance to the final</h3>" +
-      poolGrid(teamRows, poolGames) +
+      poolGrid(teamRows, poolGames, colors) +
       "<h3>Final</h3>" +
       finalBlock(bracketRow, finalGame);
   }
@@ -246,13 +288,14 @@
   }
 
   function refresh() {
-    Promise.all([readTab("Schedule"), readTab("Leaderboard"), readTab("Bracket")])
+    Promise.all([readTab("Schedule"), readTab("Leaderboard"), readTab("Bracket"), readTab("Teams")])
       .then(function (results) {
         var games = results[0];
         var split = splitLeaderboard(results[1]);
+        var colors = shirtColors(results[3]);
         renderGames(games);
-        renderDivision("men", "Men", games, split.men, results[2]);
-        renderDivision("women", "Women", games, split.women, results[2]);
+        renderDivision("men", "Men", games, split.men, results[2], colors);
+        renderDivision("women", "Women", games, split.women, results[2], colors);
         document.getElementById("banner").classList.remove("show");
         var t = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" });
         setStatus(true, "Live · updated " + t);

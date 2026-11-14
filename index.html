@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Unity Games 2026 Volleyball: Live Scores</title>
+<title>Unity Games 2026 Volleyball: Live Brackets and Scores</title>
 <style>
-  :root { --navy:#1e4f77; --ink:#1d2730; --muted:#5d6b78; --line:#d9e1e8; --bg:#f4f7fa; --ok:#2e8b57; --warn:#b26a00; }
+  :root { --navy:#1e4f77; --ink:#1d2730; --muted:#5d6b78; --line:#d9e1e8; --bg:#f4f7fa; --ok:#2e8b57; --lost:#a0463a; --warn:#b26a00; }
   * { box-sizing:border-box; }
   body { margin:0; font-family: Arial, Helvetica, sans-serif; color:var(--ink); background:var(--bg); }
   header { background:var(--navy); color:#fff; padding:20px 16px; }
@@ -18,26 +18,46 @@
   main { max-width:960px; margin:0 auto; padding:16px; }
   section { background:#fff; border:1px solid var(--line); border-radius:8px; padding:16px; margin-bottom:16px; }
   h2 { margin:0 0 12px; font-size:18px; color:var(--navy); }
-  h3 { margin:16px 0 8px; font-size:15px; }
+  h3 { margin:18px 0 8px; font-size:14px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
   table { width:100%; border-collapse:collapse; font-size:14px; }
   th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); }
   th { font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
   td.num, th.num { text-align:right; }
   .win { font-weight:bold; color:var(--ok); }
   .score { font-variant-numeric:tabular-nums; white-space:nowrap; font-weight:bold; }
-  .pending { color:var(--muted); }
-  .yes { color:var(--ok); font-weight:bold; }
-  .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-  .champ { background:#eef6ee; border:1px solid #c9e4cc; border-radius:8px; padding:12px; margin-top:8px; }
-  .champ strong { color:var(--ok); }
+  .pending { color:var(--muted); font-size:14px; }
   .banner { display:none; background:#fff4e5; color:var(--warn); border:1px solid #f1d3a2; border-radius:8px; padding:10px 12px; margin-bottom:16px; font-size:14px; }
   .banner.show { display:block; }
   .timeline { list-style:none; padding:0; margin:0; }
   .timeline li { display:flex; gap:12px; padding:6px 0; border-bottom:1px solid var(--line); font-size:14px; }
   .timeline li span:first-child { min-width:78px; font-weight:bold; color:var(--navy); }
   footer { text-align:center; color:var(--muted); font-size:12px; padding:8px 16px 24px; }
+
+  /* Round-robin score grid */
+  .gridwrap { overflow-x:auto; }
+  table.pool { width:auto; min-width:100%; font-size:13px; }
+  table.pool th, table.pool td { border:1px solid var(--line); text-align:center; padding:8px 6px; white-space:nowrap; }
+  table.pool th.rowhead { text-align:left; text-transform:none; letter-spacing:0; color:var(--ink); font-size:13px; font-weight:bold; }
+  table.pool td.cell { font-variant-numeric:tabular-nums; font-weight:bold; }
+  table.pool td.won { background:#e7f4ec; color:var(--ok); }
+  table.pool td.lost { background:#f8ecea; color:var(--lost); }
+  table.pool td.open { color:#aab4bf; font-weight:normal; }
+  table.pool td.diag { background:#eef2f6; }
+
+  /* Final and champion */
+  .bracket { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  .round { min-width:220px; flex:1 1 220px; }
+  .round .label { font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin-bottom:6px; }
+  .match { border:1px solid var(--line); border-radius:6px; overflow:hidden; }
+  .side { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 12px; background:#fff; font-size:14px; }
+  .side + .side { border-top:1px solid var(--line); }
+  .side.won { background:#e7f4ec; color:var(--ok); font-weight:bold; }
+  .side b { font-variant-numeric:tabular-nums; font-size:16px; }
+  .connector { width:28px; border-top:2px solid var(--line); flex:0 0 28px; }
+  .champ-box { border:2px solid var(--ok); background:#eef6ee; border-radius:6px; padding:14px; font-weight:bold; color:var(--ok); text-align:center; font-size:15px; }
+  .champ-box.pending-champ { border-style:dashed; border-color:#aab4bf; background:#fff; color:var(--muted); font-weight:normal; }
+
   @media (max-width:700px) {
-    .grid { grid-template-columns:1fr; }
     table { font-size:13px; }
     th, td { padding:6px 4px; }
   }
@@ -67,39 +87,13 @@
   </section>
 
   <section>
-    <h2>Finals and champions</h2>
-    <div class="grid">
-      <div>
-        <h3>Men's final</h3>
-        <div id="final-men">Waiting for pool play to finish.</div>
-        <div class="champ" id="champ-men" style="display:none"></div>
-      </div>
-      <div>
-        <h3>Women's final</h3>
-        <div id="final-women">Waiting for pool play to finish.</div>
-        <div class="champ" id="champ-women" style="display:none"></div>
-      </div>
-    </div>
+    <h2>Men's bracket</h2>
+    <div id="men-bracket"><p class="pending">Loading...</p></div>
   </section>
 
   <section>
-    <h2>Standings</h2>
-    <div class="grid">
-      <div>
-        <h3>Men</h3>
-        <table>
-          <thead><tr><th>#</th><th>Team</th><th class="num">W</th><th class="num">L</th><th class="num">Pts for</th><th>Adv</th></tr></thead>
-          <tbody id="standings-men"></tbody>
-        </table>
-      </div>
-      <div>
-        <h3>Women</h3>
-        <table>
-          <thead><tr><th>#</th><th>Team</th><th class="num">W</th><th class="num">L</th><th class="num">Pts for</th><th>Adv</th></tr></thead>
-          <tbody id="standings-women"></tbody>
-        </table>
-      </div>
-    </div>
+    <h2>Women's bracket</h2>
+    <div id="women-bracket"><p class="pending">Loading...</p></div>
   </section>
 
   <section>
@@ -124,6 +118,10 @@
     });
   }
 
+  // Team code is the first word of the team name, such as "M1" or "W3".
+  function code(name) { return String(name || "").split(" ")[0]; }
+  function shortName(name) { return String(name || "").replace(/^\S+\s*/, ""); }
+
   // Read one tab from the sheet as an array of rows of display strings.
   function readTab(name) {
     var url = "https://docs.google.com/spreadsheets/d/" + SHEET_ID +
@@ -145,10 +143,6 @@
       });
   }
 
-  function isWin(winner, team) {
-    return winner && team && winner === team;
-  }
-
   function renderGames(rows) {
     // Schedule game rows: [Time, Court, Division, Stage, Team A, Team B, Score A, Score B, Winner]
     var games = rows.filter(function (r) {
@@ -158,8 +152,8 @@
       var score = g[6] !== "" && g[7] !== ""
         ? esc(g[6]) + " &ndash; " + esc(g[7])
         : '<span class="pending">Not yet played</span>';
-      var a = isWin(g[8], g[4]) ? '<span class="win">' + esc(g[4]) + "</span>" : esc(g[4]);
-      var b = isWin(g[8], g[5]) ? '<span class="win">' + esc(g[5]) + "</span>" : esc(g[5]);
+      var a = g[8] === g[4] ? '<span class="win">' + esc(g[4]) + "</span>" : esc(g[4]);
+      var b = g[8] === g[5] ? '<span class="win">' + esc(g[5]) + "</span>" : esc(g[5]);
       return "<tr><td>" + esc(g[0]) + "</td><td>" + esc(g[1]) + "</td><td>" +
         esc(g[2]) + (g[3] === "Final" ? " final" : "") + "</td><td>" + a + " vs " + b +
         '</td><td class="num score">' + score + "</td></tr>";
@@ -167,12 +161,12 @@
     document.getElementById("games").innerHTML = html.join("");
   }
 
-  function renderStandings(rows) {
-    // Leaderboard rows: [Place, Team, W, L, Ties, Pts for, Pts against, Advances].
-    // The sheet's "MEN" and "WOMEN" labels come through as column headings, so each
-    // division starts at its own "Team" header row: first is men, second is women.
+  // Leaderboard rows: [Place, Team, W, L, Ties, Pts for, Pts against, Advances].
+  // The sheet's "MEN" and "WOMEN" labels come through as column headings, so each
+  // division starts at its own "Team" header row: first is men, second is women.
+  function splitLeaderboard(rows) {
     var division = null, headerCount = 0;
-    var men = [], women = [];
+    var out = { men: [], women: [] };
     rows.forEach(function (r) {
       if (r[1] === "Team") {
         headerCount += 1;
@@ -180,40 +174,70 @@
         return;
       }
       if (!division || !/^\d+$/.test(r[0]) || r[1] === "") return;
-      (division === "men" ? men : women).push(r);
+      out[division].push(r);
     });
-    function table(list) {
-      if (!list.length) return '<tr><td colspan="6" class="pending">No teams yet</td></tr>';
-      return list.map(function (r) {
-        return "<tr><td>" + esc(r[0]) + "</td><td>" + esc(r[1]) + '</td><td class="num">' +
-          esc(r[2]) + '</td><td class="num">' + esc(r[3]) + '</td><td class="num">' + esc(r[5]) +
-          "</td><td>" + (r[7] === "Yes" ? '<span class="yes">Yes</span>' : "") + "</td></tr>";
-      }).join("");
-    }
-    document.getElementById("standings-men").innerHTML = table(men);
-    document.getElementById("standings-women").innerHTML = table(women);
+    return out;
   }
 
-  function renderBracket(rows) {
-    // Bracket finals table: [Division, Seed 1, Seed 2, Final A, Final B, Winner, Locales]
-    ["Men", "Women"].forEach(function (div) {
-      var key = div.toLowerCase();
-      var r = rows.filter(function (x) { return x[0] === div; })[0];
-      var finalEl = document.getElementById("final-" + key);
-      var champEl = document.getElementById("champ-" + key);
-      if (!r || !r[3] || !r[4]) {
-        finalEl.textContent = "Waiting for pool play to finish.";
-        champEl.style.display = "none";
-        return;
-      }
-      finalEl.innerHTML = "<strong>" + esc(r[3]) + "</strong><br>vs<br><strong>" + esc(r[4]) + "</strong>";
-      if (r[5] && r[5] !== "Not yet decided") {
-        champEl.style.display = "block";
-        champEl.innerHTML = "Champion: <strong>" + esc(r[5]) + "</strong>";
-      } else {
-        champEl.style.display = "none";
-      }
-    });
+  // Round-robin grid: each cell is the score of that pairing, from the row team's side.
+  function poolGrid(teamRows, poolGames) {
+    if (!teamRows.length) return '<p class="pending">Teams appear once the sheet is set up.</p>';
+    var teams = teamRows.map(function (r) { return r[1]; });
+    var head = "<tr><th></th>" + teams.map(function (t) {
+      return '<th title="' + esc(t) + '">' + esc(code(t)) + "</th>";
+    }).join("") + "<th>W&ndash;L</th></tr>";
+    var body = teamRows.map(function (row) {
+      var a = row[1];
+      var cells = teams.map(function (b) {
+        if (a === b) return '<td class="diag"></td>';
+        var g = poolGames.filter(function (x) {
+          return (x[4] === a && x[5] === b) || (x[4] === b && x[5] === a);
+        })[0];
+        if (!g || g[6] === "" || g[7] === "") return '<td class="cell open">&ndash;</td>';
+        var mine = g[4] === a ? g[6] : g[7];
+        var theirs = g[4] === a ? g[7] : g[6];
+        var cls = g[8] === a ? "won" : "lost";
+        return '<td class="cell ' + cls + '">' + esc(mine) + " &ndash; " + esc(theirs) + "</td>";
+      }).join("");
+      return '<tr><th class="rowhead">' + esc(code(a)) + " " + esc(shortName(a)) + "</th>" + cells +
+        "<td><strong>" + esc(row[2]) + "&ndash;" + esc(row[3]) + "</strong></td></tr>";
+    }).join("");
+    return '<div class="gridwrap"><table class="pool"><thead>' + head +
+      "</thead><tbody>" + body + "</tbody></table></div>";
+  }
+
+  // Final match and champion box, from the Bracket tab and the Final row on Schedule.
+  function finalBlock(bracketRow, finalGame) {
+    var a = bracketRow && bracketRow[3], b = bracketRow && bracketRow[4];
+    if (!a || !b) return '<p class="pending">The final is set once pool play finishes.</p>';
+    var hasScore = finalGame && finalGame[6] !== "" && finalGame[7] !== "";
+    var sa = hasScore ? esc(finalGame[6]) : "", sb = hasScore ? esc(finalGame[7]) : "";
+    var winA = hasScore && finalGame[8] === a, winB = hasScore && finalGame[8] === b;
+    var champ = bracketRow[5];
+    var champion = champ && champ !== "Not yet decided";
+    var champHtml = champion
+      ? '<div class="champ-box">' + esc(champ) + "</div>"
+      : '<div class="champ-box pending-champ">Decided after the final</div>';
+    return '<div class="bracket">' +
+      '<div class="round"><div class="label">' + (hasScore ? "Final" : "Final, 8:30 PM") + "</div>" +
+      '<div class="match">' +
+      '<div class="side' + (winA ? " won" : "") + '"><span>' + esc(a) + "</span><b>" + sa + "</b></div>" +
+      '<div class="side' + (winB ? " won" : "") + '"><span>' + esc(b) + "</span><b>" + sb + "</b></div>" +
+      "</div></div>" +
+      '<div class="connector"></div>' +
+      '<div class="round"><div class="label">Champion</div>' + champHtml + "</div>" +
+      "</div>";
+  }
+
+  function renderDivision(key, div, games, teamRows, bracketRows) {
+    var poolGames = games.filter(function (g) { return g[2] === div && g[3] === "Pool"; });
+    var finalGame = games.filter(function (g) { return g[2] === div && g[3] === "Final"; })[0];
+    var bracketRow = bracketRows.filter(function (x) { return x[0] === div; })[0];
+    document.getElementById(key + "-bracket").innerHTML =
+      "<h3>Pool play: top 2 by wins, then points, advance to the final</h3>" +
+      poolGrid(teamRows, poolGames) +
+      "<h3>Final</h3>" +
+      finalBlock(bracketRow, finalGame);
   }
 
   function setStatus(ok, text) {
@@ -224,9 +248,11 @@
   function refresh() {
     Promise.all([readTab("Schedule"), readTab("Leaderboard"), readTab("Bracket")])
       .then(function (results) {
-        renderGames(results[0]);
-        renderStandings(results[1]);
-        renderBracket(results[2]);
+        var games = results[0];
+        var split = splitLeaderboard(results[1]);
+        renderGames(games);
+        renderDivision("men", "Men", games, split.men, results[2]);
+        renderDivision("women", "Women", games, split.women, results[2]);
         document.getElementById("banner").classList.remove("show");
         var t = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" });
         setStatus(true, "Live · updated " + t);

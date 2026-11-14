@@ -47,6 +47,11 @@
   .slot-score { font-variant-numeric:tabular-nums; color:var(--ink); margin-top:2px; }
   .slot-final .slot-match { color:var(--navy); }
   .sitout { font-size:12px; color:var(--muted); }
+  .sheet-list { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:8px; }
+  .sheet-item { display:flex; justify-content:space-between; align-items:center; gap:8px; border:1px solid var(--line); border-radius:6px; padding:8px 10px; font-size:13px; }
+  .sheet-item small { display:block; color:var(--muted); }
+  .btn { background:var(--navy); color:#fff; border:0; border-radius:5px; padding:7px 10px; font-size:12px; cursor:pointer; white-space:nowrap; }
+  .btn:hover { opacity:.9; }
   .slot-team { font-size:12px; font-weight:bold; line-height:1.3; margin-top:3px; }
   .slot-vs { font-size:10px; color:var(--muted); text-transform:uppercase; }
   .swatch { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; vertical-align:middle; border:1px solid rgba(0,0,0,.25); }
@@ -120,6 +125,12 @@
       <thead><tr><th>Time</th><th>Court</th><th>Division</th><th>Teams</th><th class="num">Score</th></tr></thead>
       <tbody id="games"></tbody>
     </table>
+  </section>
+
+  <section>
+    <h2>Score sheets</h2>
+    <p class="pending">Each sheet fills in from the schedule. Press Print, then print one per game.</p>
+    <div class="sheet-list" id="sheets"><p class="pending">Loading...</p></div>
   </section>
 </main>
 
@@ -399,6 +410,65 @@
       finalBlock(bracketRow, finalGame);
   }
 
+  var GAMES = [];
+
+  // Printable score sheet, filled from one Schedule row. Player lines are left blank for handwriting.
+  function sheetHtml(g) {
+    var team = function (name) { return esc(name || ""); };
+    var rowsHtml = "";
+    for (var n = 1; n <= 16; n++) {
+      rowsHtml += "<tr><td></td><td></td><td class=\"sn\">" + n + "</td><td class=\"sn\">" + (n + 16) + "</td>" +
+        "<td></td><td></td><td class=\"sn\">" + n + "</td><td class=\"sn\">" + (n + 16) + "</td></tr>";
+    }
+    return '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Score sheet ' + esc(g[0]) + ' ' + esc(g[1]) + '</title>' +
+      '<style>@page{size:letter landscape;margin:.4in}body{font-family:Arial,Helvetica,sans-serif;color:#000;margin:0}' +
+      'table{border-collapse:collapse;width:100%}td,th{border:2px solid #000;padding:3px 5px;font-size:12px;vertical-align:top}' +
+      '.title{font-size:30px;font-weight:bold;padding:8px 10px;text-align:left}.lbl{font-size:10px;display:block}' +
+      '.big{font-size:20px;font-weight:bold}.sn{text-align:center;width:38px;font-size:14px}.vs{text-align:center;font-size:22px;font-weight:bold}' +
+      '.ref td{font-size:13px;height:24px}</style></head><body>' +
+      '<table><tr><td colspan="6" class="title"><span class="lbl">Tournament</span>District Unity Games: VOLLEYBALL</td>' +
+      '<td style="width:120px"><span class="lbl">Court No.</span><span class="big">' + team(g[1]) + '</span></td></tr>' +
+      '<tr><td colspan="4"><span class="lbl">Playing Site</span><span class="big">Milpitas Sports Center</span></td>' +
+      '<td colspan="2"><span class="lbl">Gender</span><span class="big">' + team(g[2]) + '</span></td>' +
+      '<td><span class="lbl">Time game started</span>' + team(g[0]) + '</td></tr>' +
+      '<tr><td colspan="3"><span class="lbl">Score sheet for (LOCAL NAME)</span><span class="big">' + team(g[4]) + '</span></td>' +
+      '<td class="vs">VS</td><td colspan="2"><span class="lbl">Opposing local</span><span class="big">' + team(g[5]) + '</span></td>' +
+      '<td><span class="lbl">Set No</span>&nbsp;</td></tr>' +
+      '<tr><td colspan="4"><span class="lbl">Name of Local</span><span class="big">' + team(g[4]) + '</span></td>' +
+      '<td colspan="4"><span class="lbl">Name of Local</span><span class="big">' + team(g[5]) + '</span></td></tr>' +
+      '<tr><td style="width:36px">No.</td><td>Name of Players</td><td class="sn">Set</td><td class="sn">Score</td>' +
+      '<td style="width:36px">No.</td><td>Name of Players</td><td class="sn">Set</td><td class="sn">Score</td></tr>' +
+      rowsHtml +
+      '<tr><td colspan="8" style="text-align:center;font-size:14px">Protest (circle one): YES &nbsp;&nbsp; NO</td></tr>' +
+      '<tr class="ref"><td colspan="3">1st Referee: ' + team(g[9]) + '</td><td colspan="2">Winning team &amp; signature:</td><td colspan="3">Losing team &amp; signature:</td></tr>' +
+      '<tr class="ref"><td colspan="3">2nd Referee:</td><td colspan="5">Scorekeeper:</td></tr>' +
+      '</table></body></html>';
+  }
+
+  function printSheet(g) {
+    var w = window.open("", "_blank");
+    if (!w) { alert("Allow pop-ups for this site to print score sheets."); return; }
+    w.document.write(sheetHtml(g));
+    w.document.close();
+    w.focus();
+    setTimeout(function () { w.print(); }, 300);
+  }
+
+  function renderSheetList(games) {
+    var el = document.getElementById("sheets");
+    if (!games.length) { el.innerHTML = '<p class="pending">Sheets appear once the schedule is set up.</p>'; return; }
+    el.innerHTML = games.map(function (g, i) {
+      var label = g[2] + (g[3] === "Final" ? " final" : "") + ", " + g[1] + ", " + g[0];
+      return '<div class="sheet-item"><span>' + esc(label) + "<small>" + esc(g[4]) + " vs " + esc(g[5]) + "</small></span>" +
+        '<button class="btn" data-i="' + i + '">Print</button></div>';
+    }).join("");
+  }
+
+  document.getElementById("sheets").addEventListener("click", function (e) {
+    var b = e.target.closest("button[data-i]");
+    if (b) printSheet(GAMES[parseInt(b.getAttribute("data-i"), 10)]);
+  });
+
   function setStatus(ok, text) {
     document.getElementById("dot").className = "dot " + (ok ? "ok" : "err");
     document.getElementById("status").textContent = text;
@@ -409,11 +479,13 @@
       .then(function (results) {
         var schedule = results[0];
         var games = gameRows(schedule);
+        GAMES = games;
         var split = splitLeaderboard(results[1]);
         var colors = shirtColors(results[3]);
         renderProgram(schedule);
         renderCourtSchedule(games, split);
         renderGames(games);
+        renderSheetList(games);
         renderDivision("men", "Men", games, split.men, results[2], colors);
         renderDivision("women", "Women", games, split.women, results[2], colors);
         document.getElementById("banner").classList.remove("show");

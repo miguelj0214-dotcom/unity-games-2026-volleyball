@@ -239,7 +239,7 @@
     }).sort(function (x, y) { return minutesOf(x) - minutesOf(y); });
 
     var head = "<tr><th>Time</th>" + courts.map(function (c) { return "<th>" + esc(c) + "</th>"; }).join("") +
-      "<th>Sitting out</th></tr>";
+      "<th>Referee</th><th>Sitting out</th></tr>";
 
     var body = times.map(function (t) {
       var slot = games.filter(function (g) { return g[0] === t; });
@@ -272,7 +272,11 @@
           if (off.length) sitting.push(div + ": " + off.map(code).join(", "));
         });
       }
+      var refs = slot.map(function (g) {
+        return g[1] + ": " + (g[9] || "TBD");
+      });
       return "<tr><td class=\"time\">" + esc(t) + "</td>" + cells +
+        '<td class="ref">' + (refs.length ? esc(refs.join(" · ")) : "&ndash;") + "</td>" +
         '<td class="sitout">' + (sitting.length ? esc(sitting.join(" · ")) : "&ndash;") + "</td></tr>";
     }).join("");
 

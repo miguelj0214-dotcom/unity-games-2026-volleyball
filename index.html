@@ -64,6 +64,16 @@
   ul.feed { list-style:none; margin:0; padding:0; }
   ul.feed li { padding:7px 0; border-bottom:1px solid var(--line); font-size:14px; animation: slidein .4s ease-out; }
   ul.feed li .t { color:var(--muted); font-size:12px; margin-right:8px; font-variant-numeric:tabular-nums; }
+  /* Win celebration */
+  .confetti-layer { position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:50; }
+  .confetti { position:absolute; top:-20px; width:9px; height:14px; border-radius:2px; animation-name:confettifall; animation-timing-function:linear; animation-fill-mode:forwards; }
+  @keyframes confettifall { to { transform:translateY(110vh) rotate(720deg); opacity:0; } }
+  .win-toast { position:fixed; left:50%; top:16px; transform:translateX(-50%) scale(.6); background:#fff; border:3px solid var(--ok); border-radius:14px; padding:12px 22px; font-weight:bold; font-size:18px; color:var(--ink); text-align:center; box-shadow:0 12px 30px rgba(0,0,0,.25); z-index:60; opacity:0; animation:toastin .6s cubic-bezier(.2,1.4,.4,1) forwards; max-width:92vw; }
+  .win-toast.out { animation:toastout .6s ease-in forwards; }
+  @keyframes toastin { to { opacity:1; transform:translateX(-50%) scale(1); } }
+  @keyframes toastout { to { opacity:0; transform:translateX(-50%) translateY(-24px); } }
+  .team-card.won { animation:winglow .8s ease-in-out 5; box-shadow:0 0 0 3px var(--ok); }
+  @keyframes winglow { 50% { box-shadow:0 0 0 8px rgba(46,139,87,.25); transform:scale(1.02); } }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; } }
   .slot-team { font-size:12px; font-weight:bold; line-height:1.3; margin-top:3px; }
   .slot-vs { font-size:10px; color:var(--muted); text-transform:uppercase; }
@@ -464,6 +474,50 @@
     }).join("");
   }
 
+  // Confetti and a banner when a game gets a winner. Finals get more confetti.
+  function celebrate(titleRaw, subRaw, big) {
+    var layer = document.createElement("div");
+    layer.className = "confetti-layer";
+    document.body.appendChild(layer);
+    var colors = ["#e0302a", "#2857c7", "#2e8b57", "#ffb400", "#8e44ad", "#1f2a5a", "#ff7ab6"];
+    var n = big ? 180 : 80;
+    for (var i = 0; i < n; i++) {
+      var c = document.createElement("span");
+      c.className = "confetti";
+      c.style.left = (Math.random() * 100) + "%";
+      c.style.background = colors[i % colors.length];
+      c.style.animationDuration = (2.4 + Math.random() * 2.2) + "s";
+      c.style.animationDelay = (Math.random() * 0.7) + "s";
+      c.style.transform = "rotate(" + Math.round(Math.random() * 360) + "deg)";
+      if (Math.random() < 0.3) c.style.borderRadius = "50%";
+      layer.appendChild(c);
+    }
+    var toast = document.createElement("div");
+    toast.className = "win-toast";
+    toast.innerHTML = "<div>" + esc(titleRaw) + '</div><div style="font-size:13px;font-weight:normal;margin-top:4px">' + esc(subRaw) + "</div>";
+    document.body.appendChild(toast);
+    setTimeout(function () { toast.classList.add("out"); }, 3800);
+    setTimeout(function () { toast.remove(); layer.remove(); }, 4500);
+  }
+
+  function celebrateWin(g, winner) {
+    var big = g[3] === "Final";
+    var score = g[6] + " \u2013 " + g[7];
+    var where = g[2] + (big ? " final" : " pool") + " \u00b7 " + g[1] + " \u00b7 " + g[0];
+    celebrate("\ud83c\udfc6 " + code(winner) + " " + shortName(winner) + " wins!", score + "  (" + where + ")", big);
+    document.querySelectorAll("[data-team]").forEach(function (el) {
+      if (el.getAttribute("data-team") !== winner) return;
+      el.classList.remove("won");
+      void el.offsetWidth;
+      el.classList.add("won");
+      setTimeout(function () { el.classList.remove("won"); }, 4100);
+    });
+    addFeed("\ud83c\udfc6 <strong>" + esc(code(winner)) + " " + esc(shortName(winner)) + "</strong> won " +
+      esc(score) + " (" + esc(g[2]) + (big ? " final" : "") + ", " + esc(g[1]) + ")");
+  }
+
+  var lastWinners = null;
+
   // Compare this refresh with the last one: highlight changed games, announce points, bump team totals.
   // The first load only records the baseline, so nothing animates on page open.
   function animateChanges(games, split) {
@@ -491,6 +545,15 @@
         if (lastPoints[t] !== undefined && lastPoints[t] !== points[t]) bumpTeam(t);
       });
     }
+    var winners = {};
+    games.forEach(function (g) { winners[gameKey(g)] = g[8] || ""; });
+    if (lastWinners) {
+      games.forEach(function (g) {
+        var k = gameKey(g), w = winners[k];
+        if (w && w !== "TIE" && w !== lastWinners[k]) celebrateWin(g, w);
+      });
+    }
+    lastWinners = winners;
     lastScores = scores;
     lastPoints = points;
   }

@@ -36,6 +36,18 @@
   .legend span { display:inline-flex; align-items:center; gap:5px; }
   .legend i { display:inline-block; width:12px; height:12px; border-radius:3px; }
 
+  /* Court schedule */
+  .court-wrap { overflow-x:auto; }
+  table.courts { font-size:13px; min-width:640px; }
+  table.courts th, table.courts td { border:1px solid var(--line); padding:8px 8px; vertical-align:top; }
+  table.courts td.time { font-weight:bold; color:var(--navy); white-space:nowrap; }
+  table.courts td.empty { color:#aab4bf; }
+  .slot-div { font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+  .slot-match { font-weight:bold; margin-top:2px; }
+  .slot-score { font-variant-numeric:tabular-nums; color:var(--ink); margin-top:2px; }
+  .slot-final .slot-match { color:var(--navy); }
+  .sitout { font-size:12px; color:var(--muted); }
+
   /* Team cards for pool play */
   .cards { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:12px; }
   .team-card { border:1px solid var(--line); border-radius:8px; overflow:hidden; background:#fff; }
@@ -84,15 +96,9 @@
 
   <section>
     <h2>Program</h2>
-    <ul class="timeline">
-      <li><span>3:30 PM</span><span>Setup in lobby</span></li>
-      <li><span>5:00 PM</span><span>Registration</span></li>
-      <li><span>6:00 PM</span><span>Enter gym, opening remarks, oathtaking, prayer</span></li>
-      <li><span>6:20 PM</span><span>Warm-ups</span></li>
-      <li><span>6:30 PM</span><span>Games begin</span></li>
-      <li><span>8:30 PM</span><span>Finals: Men's on Court 1, Women's on Court 3</span></li>
-      <li><span>9:15 PM</span><span>Awards</span></li>
-    </ul>
+    <ul class="timeline" id="program"><li><span class="pending">Loading...</span></li></ul>
+    <h3>Court schedule</h3>
+    <div class="court-wrap" id="court-schedule"><p class="pending">Loading...</p></div>
   </section>
 
   <section>
@@ -114,7 +120,7 @@
   </section>
 </main>
 
-<footer>Scores refresh automatically every 30 seconds. Scorekeepers enter results in the official scoring sheet.</footer>
+<footer>Scores and schedule refresh automatically every 30 seconds. Scorekeepers enter results, and schedule changes are made, in the official sheet.</footer>
 
 <script>
 (function () {
@@ -142,6 +148,15 @@
   function shortName(name) { return String(name || "").replace(/^\S+\s*/, ""); }
   function shirtCss(color) { return SHIRT[String(color || "").trim().toLowerCase()] || "#5d6b78"; }
 
+  // "6:30 PM" to minutes after midnight, for sorting. Returns null if not a time.
+  function minutesOf(t) {
+    var m = /^(\d{1,2}):(\d{2})\s*([AP]M)$/i.exec(String(t || "").trim());
+    if (!m) return null;
+    var h = parseInt(m[1], 10) % 12;
+    if (m[3].toUpperCase() === "PM") h += 12;
+    return h * 60 + parseInt(m[2], 10);
+  }
+
   // Read one tab from the sheet as an array of rows of display strings.
   function readTab(name) {
     var url = "https://docs.google.com/spreadsheets/d/" + SHEET_ID +
@@ -163,11 +178,40 @@
       });
   }
 
-  function renderGames(rows) {
-    // Schedule game rows: [Time, Court, Division, Stage, Team A, Team B, Score A, Score B, Winner]
-    var games = rows.filter(function (r) {
-      return (r[2] === "Men" || r[2] === "Women") && (r[3] === "Pool" || r[3] === "Final");
+  // Schedule tab, program block: rows with a time, an activity, and nothing in the Division column.
+  function programRows(rows) {
+    return rows.filter(function (r) {
+      return minutesOf(r[0]) !== null && r[1] !== "" && r[2] === "";
     });
+  }
+
+  // Schedule tab, game rows: [Time, Court, Division, Stage, Team A, Team B, Score A, Score B, Winner]
+  function gameRows(rows) {
+    return rows.filter(function (r) {
+      return minutesOf(r[0]) !== null && /^Court/.test(r[1]) &&
+        (r[2] === "Men" || r[2] === "Women") && (r[3] === "Pool" || r[3] === "Final");
+    });
+  }
+
+  var DEFAULT_PROGRAM = [
+    ["3:30 PM", "Setup in lobby"],
+    ["5:00 PM", "Registration"],
+    ["6:00 PM", "Enter gym, opening remarks, oathtaking, prayer"],
+    ["6:20 PM", "Warm-ups"],
+    ["6:30 PM", "Games begin"],
+    ["8:30 PM", "Finals: Men's on Court 1, Women's on Court 3"],
+    ["9:15 PM", "Awards"]
+  ];
+
+  function renderProgram(rows) {
+    var list = programRows(rows);
+    if (!list.length) list = DEFAULT_PROGRAM.map(function (p) { return [p[0], p[1], ""]; });
+    document.getElementById("program").innerHTML = list.map(function (r) {
+      return "<li><span>" + esc(r[0]) + "</span><span>" + esc(r[1]) + "</span></li>";
+    }).join("");
+  }
+
+  function renderGames(games) {
     var html = games.map(function (g) {
       var score = g[6] !== "" && g[7] !== ""
         ? esc(g[6]) + " &ndash; " + esc(g[7])
@@ -177,8 +221,62 @@
       return "<tr><td>" + esc(g[0]) + "</td><td>" + esc(g[1]) + "</td><td>" +
         esc(g[2]) + (g[3] === "Final" ? " final" : "") + "</td><td>" + a + " vs " + b +
         '</td><td class="num score">' + score + "</td></tr>";
-    });
-    document.getElementById("games").innerHTML = html.join("");
+    }).join("");
+    document.getElementById("games").innerHTML = html;
+  }
+
+  // Court schedule: one row per time slot, one column per court, with each division's
+  // teams that are not playing in that slot listed under "Sitting out".
+  function renderCourtSchedule(games, split) {
+    var el = document.getElementById("court-schedule");
+    if (!games.length) { el.innerHTML = '<p class="pending">The court schedule will appear once it is set up.</p>'; return; }
+
+    var courts = games.map(function (g) { return g[1]; }).filter(function (c, i, all) {
+      return all.indexOf(c) === i;
+    }).sort();
+    var times = games.map(function (g) { return g[0]; }).filter(function (t, i, all) {
+      return all.indexOf(t) === i;
+    }).sort(function (x, y) { return minutesOf(x) - minutesOf(y); });
+
+    var head = "<tr><th>Time</th>" + courts.map(function (c) { return "<th>" + esc(c) + "</th>"; }).join("") +
+      "<th>Sitting out</th></tr>";
+
+    var body = times.map(function (t) {
+      var slot = games.filter(function (g) { return g[0] === t; });
+      var cells = courts.map(function (c) {
+        var g = slot.filter(function (x) { return x[1] === c; })[0];
+        if (!g) return '<td class="empty">&ndash;</td>';
+        var isFinal = g[3] === "Final";
+        var played = g[6] !== "" && g[7] !== "";
+        var scoreLine = played
+          ? '<div class="slot-score">' + esc(g[6]) + " &ndash; " + esc(g[7]) + "</div>"
+          : "";
+        return '<td class="' + (isFinal ? "slot-final" : "") + '">' +
+          '<div class="slot-div">' + esc(g[2]) + (isFinal ? " final" : "") + "</div>" +
+          '<div class="slot-match">' + esc(code(g[4])) + " vs " + esc(code(g[5])) + "</div>" +
+          scoreLine + "</td>";
+      }).join("");
+
+      var isPool = slot.some(function (g) { return g[3] === "Pool"; });
+      var sitting = [];
+      if (isPool) {
+        ["Men", "Women"].forEach(function (div) {
+          var key = div === "Men" ? "men" : "women";
+          var playing = {};
+          slot.forEach(function (g) {
+            if (g[2] === div) { playing[g[4]] = true; playing[g[5]] = true; }
+          });
+          var off = (split[key] || []).map(function (r) { return r[1]; }).filter(function (name) {
+            return !playing[name];
+          });
+          if (off.length) sitting.push(div + ": " + off.map(code).join(", "));
+        });
+      }
+      return "<tr><td class=\"time\">" + esc(t) + "</td>" + cells +
+        '<td class="sitout">' + (sitting.length ? esc(sitting.join(" · ")) : "&ndash;") + "</td></tr>";
+    }).join("");
+
+    el.innerHTML = '<table class="courts"><thead>' + head + "</thead><tbody>" + body + "</tbody></table>";
   }
 
   // Leaderboard rows: [Place, Team, W, L, Ties, Pts for, Pts against, Advances].
@@ -293,9 +391,12 @@
   function refresh() {
     Promise.all([readTab("Schedule"), readTab("Leaderboard"), readTab("Bracket"), readTab("Teams")])
       .then(function (results) {
-        var games = results[0];
+        var schedule = results[0];
+        var games = gameRows(schedule);
         var split = splitLeaderboard(results[1]);
         var colors = shirtColors(results[3]);
+        renderProgram(schedule);
+        renderCourtSchedule(games, split);
         renderGames(games);
         renderDivision("men", "Men", games, split.men, results[2], colors);
         renderDivision("women", "Women", games, split.women, results[2], colors);

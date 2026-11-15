@@ -581,7 +581,7 @@
         if (doneNow[k] && !lastDone[k]) celebrateWin(g, g[8] || "");
       });
     }
-    if (!lastScores) {
+    if (!lastScores && !feedItems.length) {
       // First load: log scores that were already entered, so the feed is never empty when games have started.
       games.forEach(function (g) {
         if (g[6] === "" || g[7] === "") return;

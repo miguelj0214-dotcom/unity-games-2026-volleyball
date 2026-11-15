@@ -48,8 +48,10 @@
   table.courts th, table.courts td { border:1px solid var(--line); padding:8px 8px; vertical-align:top; }
   table.courts td.time { font-weight:bold; color:var(--navy); white-space:nowrap; }
   table.courts td.empty { color:#aab4bf; }
-  .announce { list-style:none; margin:0; padding:0; }
-  .announce li { padding:10px 12px; margin-bottom:8px; border-left:4px solid var(--gold); background:#fbf6e6; border-radius:6px; font-size:15px; font-weight:bold; color:var(--ink); }
+  /* Announcements ticker: text slides left to right, looping */
+  .ticker { overflow:hidden; white-space:nowrap; background:#fbf6e6; border-left:4px solid var(--gold); border-radius:6px; padding:10px 0; }
+  .ticker-track { display:inline-block; font-weight:bold; font-size:17px; color:var(--ink); padding-left:12px; animation: tickerLR linear infinite; }
+  @keyframes tickerLR { from { transform:translateX(calc(-1 * var(--shift))); } to { transform:translateX(0); } }
   .slot-ref { margin-top:6px; padding-top:4px; border-top:1px dashed var(--line); font-size:12px; color:var(--muted); }
   .slot-div { font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
   .slot-match { font-weight:bold; margin-top:2px; }
@@ -160,7 +162,7 @@
 
   <section id="announce-section" style="display:none">
     <h2>Live announcements</h2>
-    <ul class="announce" id="announce"></ul>
+    <div class="ticker" aria-live="polite"><div class="ticker-track" id="announce-track"></div></div>
   </section>
 
   <div class="banner" id="banner">Couldn't load the latest scores. Retrying every 30 seconds.</div>
@@ -294,7 +296,13 @@
     var section = document.getElementById("announce-section");
     if (!items.length) { section.style.display = "none"; return; }
     section.style.display = "";
-    document.getElementById("announce").innerHTML = items.map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("");
+    var line = items.map(esc).join("   \u2022   ") + "   \u2022   ";
+    // Repeat the line so the loop always fills the box; the animation moves one copy at a time.
+    var copies = Math.max(3, Math.ceil(300 / line.length));
+    var track = document.getElementById("announce-track");
+    track.innerHTML = new Array(copies + 1).join(line);
+    track.style.setProperty("--shift", (100 / copies) + "%");
+    track.style.animationDuration = Math.max(15, line.length * 0.12) + "s";
   }
 
   function renderProgram(rows) {

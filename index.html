@@ -56,7 +56,7 @@
   .flash td, tr.flash td, td.flash { animation: flashbg 3s ease-out 1; }
   .ttotal.bump { display:inline-block; animation: pop .9s ease-out 1; border-radius:4px; }
   .live-dot { width:9px; height:9px; border-radius:50%; background:#e0302a; display:inline-block; margin-right:8px; vertical-align:middle; animation: livepulse 1.4s infinite; }
-  ul.feed { list-style:none; margin:0; padding:0; }
+  ul.feed { list-style:none; margin:0; padding:0; max-height:460px; overflow-y:auto; }
   ul.feed li { padding:7px 0; border-bottom:1px solid var(--line); font-size:14px; animation: slidein .4s ease-out; }
   ul.feed li .t { color:var(--muted); font-size:12px; margin-right:8px; font-variant-numeric:tabular-nums; }
   /* Win celebration */
@@ -124,7 +124,8 @@
 <main>
   <section id="feed-section">
     <h2><span class="live-dot"></span>Live updates</h2>
-    <ul class="feed" id="feed"><li class="pending">Score changes will appear here as they're entered.</li></ul>
+    <p class="muted" style="margin:0 0 6px;font-size:13px">Every point is logged here with the time it was updated. Newest first.</p>
+    <ul class="feed" id="feed"><li class="pending">Points will appear here as they're entered.</li></ul>
   </section>
 
   <div class="banner" id="banner">Couldn't load the latest scores. Retrying every 30 seconds.</div>
@@ -482,7 +483,7 @@
   function addFeed(text) {
     var t = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
     feedItems.unshift({ t: t, text: text });
-    feedItems = feedItems.slice(0, 8);
+    feedItems = feedItems.slice(0, 200);
     document.getElementById("feed").innerHTML = feedItems.map(function (f) {
       return '<li><span class="t">' + esc(f.t) + "</span>" + f.text + "</li>";
     }).join("");

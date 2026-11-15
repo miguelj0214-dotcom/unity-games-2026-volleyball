@@ -10,6 +10,9 @@
   body { margin:0; font-family: Arial, Helvetica, sans-serif; color:var(--ink); background:var(--bg); }
   header { background:var(--navy); color:#fff; padding:20px 16px; }
   header h1 { margin:0 0 4px; font-size:22px; }
+  .brand { display:flex; align-items:center; gap:12px; margin-bottom:6px; }
+  .brand img { width:64px; height:auto; background:#fff; border-radius:8px; padding:4px; flex:none; }
+  .brand h1 { margin:0; }
   header p { margin:0; opacity:.9; font-size:14px; }
   .status { display:inline-block; margin-top:10px; font-size:13px; padding:4px 10px; border-radius:12px; background:rgba(255,255,255,.15); }
   .dot { display:inline-block; width:9px; height:9px; border-radius:50%; background:#9bd1ff; margin-right:6px; vertical-align:middle; }
@@ -134,7 +137,7 @@
 </head>
 <body>
 <header>
-  <h1>Unity Games 2026 Volleyball</h1>
+  <div class="brand"><img src="logo.png" alt="Unity Games logo"><h1>Unity Games 2026 Volleyball</h1></div>
   <p>Sunday, November 15, 2026 &middot; Milpitas Sports Center</p>
   <span class="status"><span class="dot" id="dot"></span><span id="status">Loading scores...</span></span>
   <p style="margin:10px 0 0;font-size:14px"><a href="https://docs.google.com/document/d/1Au_Z-ZPmr4Kc13m2-ESTXPP618zkIUpSmCE1GaWpil0/edit?usp=sharing" target="_blank" rel="noopener" style="color:#fff;font-weight:bold;text-decoration:underline">Athlete Packet</a></p>

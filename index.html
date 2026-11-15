@@ -424,14 +424,15 @@
   }
 
   // Final match and champion box, from the Bracket tab and the Final row on Schedule.
-  function finalBlock(bracketRow, finalGame) {
-    var a = bracketRow && bracketRow[3], b = bracketRow && bracketRow[4];
+  function finalBlock(bracketRow, finalGame, poolDone) {
+    // Teams stay hidden until every pool game in this division is finished.
+    var a = poolDone && bracketRow ? bracketRow[3] : "TBD", b = poolDone && bracketRow ? bracketRow[4] : "TBD";
     if (!a || !b) return '<p class="pending">The final is set once pool play finishes.</p>';
     var hasScore = finalGame && finalGame[6] !== "" && finalGame[7] !== "";
     var sa = hasScore ? esc(finalGame[6]) : "", sb = hasScore ? esc(finalGame[7]) : "";
     var winA = hasScore && finalGame[8] === a, winB = hasScore && finalGame[8] === b;
     var champ = bracketRow[5];
-    var champion = champ && champ !== "Not yet decided";
+    var champion = poolDone && champ && champ !== "Not yet decided";
     var champHtml = champion
       ? '<div class="champ-box">' + esc(champ) + "</div>"
       : '<div class="champ-box pending-champ">Decided after the final</div>';
@@ -455,7 +456,7 @@
       "<h3>Pool play: top 2 by wins, then points, advance to the final</h3>" +
       teamCards(teamRows, poolGames, colors) +
       "<h3>Final</h3>" +
-      finalBlock(bracketRow, finalGame);
+      finalBlock(bracketRow, finalGame, poolGames.length > 0 && poolGames.every(isDone));
   }
 
   var lastScores = null, lastPoints = null, feedItems = [];

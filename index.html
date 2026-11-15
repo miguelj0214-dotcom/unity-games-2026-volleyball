@@ -11,6 +11,8 @@
   header { background:linear-gradient(90deg,#6b4e14,#a67f2c 55%,#c9a24a); color:#fff; padding:20px 16px; }
   header h1 { margin:0 0 4px; font-size:22px; }
   .brand { display:flex; align-items:center; gap:12px; margin-bottom:6px; }
+  .brand { flex-wrap:wrap; }
+  .logos { display:flex; align-items:center; gap:16px; flex:none; }
   .brand img { width:120px; height:auto; flex:none; }
   .brand img.svc { width:150px; }
   .brand .district { margin:2px 0 0; font-size:15px; font-weight:bold; letter-spacing:.03em; opacity:.95; }
@@ -117,8 +119,10 @@
   @media (max-width:700px) {
     header { padding:14px 12px; }
     header h1 { font-size:19px; }
-    .brand img { width:88px; }
-    .brand img.svc { width:110px; }
+    .brand { flex-direction:column; align-items:stretch; gap:10px; }
+    .logos { justify-content:space-between; gap:10px; }
+    .brand img { width:46%; max-width:200px; }
+    .brand img.svc { width:46%; max-width:220px; }
     main { padding:10px; }
     section { padding:12px; margin-bottom:12px; border-radius:6px; }
     h2 { font-size:17px; }
@@ -141,7 +145,7 @@
 </head>
 <body>
 <header>
-  <div class="brand"><img src="logo.png" alt="Unity Games logo"><img class="svc" src="svc-logo.png" alt="SVC logo"><div><h1>Unity Games 2026 Volleyball</h1><p class="district">Silicon Valley, California</p></div></div>
+  <div class="brand"><div class="logos"><img src="logo.png?v=3" alt="Unity Games logo"><img class="svc" src="svc-logo.png?v=3" alt="SVC logo"></div><div><h1>Unity Games 2026 Volleyball</h1><p class="district">Silicon Valley, California</p></div></div>
   <p>Sunday, November 15, 2026 &middot; Milpitas Sports Center</p>
   <span class="status"><span class="dot" id="dot"></span><span id="status">Loading scores...</span></span>
   <p style="margin:10px 0 0;font-size:14px"><a href="https://docs.google.com/document/d/1Au_Z-ZPmr4Kc13m2-ESTXPP618zkIUpSmCE1GaWpil0/edit?usp=sharing" target="_blank" rel="noopener" style="color:#fff;font-weight:bold;text-decoration:underline">Athlete Packet</a></p>

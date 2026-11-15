@@ -57,7 +57,8 @@
   .ttotal.bump { display:inline-block; animation: pop .9s ease-out 1; border-radius:4px; }
   .live-dot { width:9px; height:9px; border-radius:50%; background:#e0302a; display:inline-block; margin-right:8px; vertical-align:middle; animation: livepulse 1.4s infinite; }
   ul.feed { list-style:none; margin:0; padding:0; max-height:460px; overflow-y:auto; }
-  ul.feed li { padding:7px 0; border-bottom:1px solid var(--line); font-size:14px; animation: slidein .4s ease-out; }
+  ul.feed li { padding:7px 0; border-bottom:1px solid var(--line); font-size:14px; }
+  ul.feed li.new { animation: slidein .4s ease-out, flashbg 3s ease-out; border-radius:6px; }
   ul.feed li .t { color:var(--muted); font-size:12px; margin-right:8px; font-variant-numeric:tabular-nums; }
   /* Win celebration */
   .confetti-layer { position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:50; }
@@ -485,16 +486,23 @@
   function renderFeed() {
     var list = document.getElementById("feed");
     if (!feedItems.length) return;
-    list.innerHTML = feedItems.map(function (f) {
-      return '<li><span class="t">' + esc(f.t) + "</span>" + f.text + "</li>";
+    list.innerHTML = feedItems.map(function (f, i) {
+      return '<li class="' + (f.fresh && i === 0 ? "new" : "") + '"><span class="t">' + esc(f.t) + "</span>" + f.text + "</li>";
     }).join("");
+  }
+
+  // "M1 Fremont" in Men games reads as "Fremont men"
+  function teamLabel(name, division) { return shortName(name) + " " + String(division || "").toLowerCase(); }
+  function pointsLine(name, division, n) {
+    return "<strong>" + esc(teamLabel(name, division)) + "</strong> scored " + n + (n === 1 ? " point" : " points");
   }
 
   function addFeed(text) {
     var t = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-    feedItems.unshift({ t: t, text: text });
+    feedItems.forEach(function (f) { f.fresh = false; });
+    feedItems.unshift({ t: t, text: text, fresh: true });
     feedItems = feedItems.slice(0, 200);
-    try { localStorage.setItem(FEED_KEY, JSON.stringify(feedItems)); } catch (e) {}
+    try { localStorage.setItem(FEED_KEY, JSON.stringify(feedItems.map(function (f) { return { t: f.t, text: f.text }; }))); } catch (e) {}
     renderFeed();
   }
   renderFeed();
@@ -560,14 +568,9 @@
         if (!was || now[0] === "" || now[1] === "") return;
         if (now[0] === was[0] && now[1] === was[1]) return;
         flashGame(k);
-        var scorer = "";
-        if (Number(now[0]) > Number(was[0] || 0)) scorer = g[4];
-        else if (Number(now[1]) > Number(was[1] || 0)) scorer = g[5];
-        var line = scorer
-          ? "<strong>" + esc(code(scorer)) + " " + esc(shortName(scorer)) + "</strong> scored. "
-          : "";
-        addFeed(line + esc(code(g[4])) + " " + esc(now[0]) + " &ndash; " + esc(now[1]) + " " + esc(code(g[5])) +
-          " (" + esc(g[2]) + (g[3] === "Final" ? " final" : "") + ", " + esc(g[1]) + ")");
+        var da = Number(now[0]) - Number(was[0] || 0), db = Number(now[1]) - Number(was[1] || 0);
+        if (da > 0) addFeed(pointsLine(g[4], g[1], da));
+        if (db > 0) addFeed(pointsLine(g[5], g[1], db));
       });
       Object.keys(points).forEach(function (t) {
         if (lastPoints[t] !== undefined && lastPoints[t] !== points[t]) bumpTeam(t);
@@ -585,8 +588,8 @@
       // First load: log scores that were already entered, so the feed is never empty when games have started.
       games.forEach(function (g) {
         if (g[6] === "" || g[7] === "") return;
-        addFeed("Score so far: " + esc(code(g[4])) + " " + esc(g[6]) + " &ndash; " + esc(g[7]) + " " + esc(code(g[5])) +
-          " (" + esc(g[2]) + (g[3] === "Final" ? " final" : "") + ", " + esc(g[1]) + ")");
+        addFeed("Score so far: " + esc(teamLabel(g[4], g[1])) + " " + esc(g[6]) + " &ndash; " + esc(g[7]) + " " +
+          esc(teamLabel(g[5], g[1])));
       });
     }
     lastDone = doneNow;

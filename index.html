@@ -300,6 +300,7 @@
       }).join("");
 
       var isPool = slot.some(function (g) { return g[3] === "Pool"; });
+      var offBy = { Men: [], Women: [] };
       var sitting = [];
       if (isPool) {
         ["Men", "Women"].forEach(function (div) {
@@ -311,14 +312,24 @@
           var off = (split[key] || []).map(function (r) { return r[1]; }).filter(function (name) {
             return !playing[name];
           });
+          offBy[div] = off;
           if (off.length) sitting.push(div + ": " + off.map(code).join(", "));
         });
       }
-      var refs = slot.map(function (g) {
-        return g[1] + ": " + (g[9] || "TBD");
+      // Teams sitting out referee their own division: the first two sitting teams cover the first court,
+      // the next two cover the next court, and so on. A name typed in the sheet's Referee column overrides this.
+      var nextRef = { Men: 0, Women: 0 };
+      var refs = slot.slice().sort(function (a, b) { return a[1] < b[1] ? -1 : 1; }).map(function (g) {
+        if (g[9]) return g[1] + ": " + g[9];
+        if (g[3] !== "Pool") return g[1] + ": TBD";
+        var pool = offBy[g[2]] || [];
+        var i = nextRef[g[2]];
+        var up = pool[i], line = pool[i + 1];
+        nextRef[g[2]] = i + 2;
+        return g[1] + ": Up ref " + (up ? code(up) : "TBD") + " \u00b7 Line judge " + (line ? code(line) : "TBD");
       });
       return "<tr><td class=\"time\">" + esc(t) + "</td>" + cells +
-        '<td class="ref">' + (refs.length ? esc(refs.join(" · ")) : "&ndash;") + "</td>" +
+        '<td class="ref">' + (refs.length ? refs.map(function (r) { return esc(r); }).join("<br>") : "&ndash;") + "</td>" +
         '<td class="sitout">' + (sitting.length ? esc(sitting.join(" · ")) : "&ndash;") + "</td></tr>";
     }).join("");
 

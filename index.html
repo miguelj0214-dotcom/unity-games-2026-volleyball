@@ -163,7 +163,9 @@
 <script>
 (function () {
   var SHEET_ID = "1x9F4G9pZ0RwykEYGzAyOmAt4AyvB1qwtvKRnBejMT-o";
-  var REFRESH_MS = 30000;
+  // Optional fast feed: the Apps Script web app URL. Leave empty to read the public sheet feed (30s).
+  var SCORE_URL = "";
+  var REFRESH_MS = SCORE_URL ? 4000 : 30000;
 
   // Shirt colors as they appear in the Teams tab, "Uniform color" column.
   var SHIRT = {
@@ -197,6 +199,14 @@
 
   // Read one tab from the sheet as an array of rows of display strings.
   function readTab(name) {
+    if (SCORE_URL) {
+      return fetch(SCORE_URL, { cache: "no-store" })
+        .then(function (r) {
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          return r.json();
+        })
+        .then(function (all) { return all[name] || []; });
+    }
     var url = "https://docs.google.com/spreadsheets/d/" + SHEET_ID +
       "/gviz/tq?tqx=out:json&headers=0&sheet=" + encodeURIComponent(name);
     return fetch(url, { cache: "no-store" })

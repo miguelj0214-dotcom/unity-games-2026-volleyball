@@ -42,6 +42,7 @@
   table.courts th, table.courts td { border:1px solid var(--line); padding:8px 8px; vertical-align:top; }
   table.courts td.time { font-weight:bold; color:var(--navy); white-space:nowrap; }
   table.courts td.empty { color:#aab4bf; }
+  .slot-ref { margin-top:6px; padding-top:4px; border-top:1px dashed var(--line); font-size:12px; color:var(--muted); }
   .slot-div { font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
   .slot-match { font-weight:bold; margin-top:2px; }
   .slot-score { font-variant-numeric:tabular-nums; color:var(--ink); margin-top:2px; }
@@ -296,6 +297,25 @@
     return c ? '<span class="swatch" style="background:' + shirtCss(c) + '"></span>' : "";
   }
 
+  // Referee text for each court in one time slot, keyed by court. Teams sitting out referee their own division:
+  // the first two sitting teams cover the first court, the next two cover the next court, and so on.
+  // A name typed in the sheet's Referee column overrides this.
+  function refsFor(slot, offBy) {
+    var nextRef = { Men: 0, Women: 0 };
+    var out = {};
+    slot.slice().sort(function (a, b) { return a[1] < b[1] ? -1 : 1; }).forEach(function (g) {
+      if (g[9]) { out[g[1]] = g[9]; return; }
+      if (g[3] !== "Pool") { out[g[1]] = "TBD"; return; }
+      var pool = offBy[g[2]] || [];
+      var i = nextRef[g[2]];
+      var up = pool[i], line = pool[i + 1];
+      nextRef[g[2]] = i + 2;
+      var label = function (t) { return t ? code(t) + " " + shortName(t) : "TBD"; };
+      out[g[1]] = "Up ref " + label(up) + " \u00b7 Line judge " + label(line);
+    });
+    return out;
+  }
+
   function renderCourtSchedule(games, split) {
     var el = document.getElementById("court-schedule");
     if (!games.length) { el.innerHTML = '<p class="pending">The court schedule will appear once it is set up.</p>'; return; }
@@ -308,26 +328,10 @@
     }).sort(function (x, y) { return minutesOf(x) - minutesOf(y); });
 
     var head = "<tr><th>Time</th>" + courts.map(function (c) { return "<th>" + esc(c) + "</th>"; }).join("") +
-      "<th>Referee</th><th>Sitting out</th></tr>";
+      "<th>Sitting out</th></tr>";
 
     var body = times.map(function (t) {
       var slot = games.filter(function (g) { return g[0] === t; });
-      var cells = courts.map(function (c) {
-        var g = slot.filter(function (x) { return x[1] === c; })[0];
-        if (!g) return '<td class="empty">&ndash;</td>';
-        var isFinal = g[3] === "Final";
-        var played = g[6] !== "" && g[7] !== "";
-        var scoreLine = played
-          ? '<div class="slot-score">' + esc(g[6]) + " &ndash; " + esc(g[7]) + badgeFor(g) + "</div>"
-          : "";
-        return '<td data-k="' + esc(gameKey(g)) + '" class="' + (isFinal ? "slot-final" : "") + '">' +
-          '<div class="slot-div">' + esc(g[2]) + (isFinal ? " final" : "") + "</div>" +
-          '<div class="slot-team">' + swatch(g[4]) + esc(code(g[4])) + " " + esc(shortName(g[4])) + "</div>" +
-          '<div class="slot-vs">vs</div>' +
-          '<div class="slot-team">' + swatch(g[5]) + esc(code(g[5])) + " " + esc(shortName(g[5])) + "</div>" +
-          scoreLine + "</td>";
-      }).join("");
-
       var isPool = slot.some(function (g) { return g[3] === "Pool"; });
       var offBy = { Men: [], Women: [] };
       var sitting = [];
@@ -345,21 +349,24 @@
           if (off.length) sitting.push(div + ": " + off.map(code).join(", "));
         });
       }
-      // Teams sitting out referee their own division: the first two sitting teams cover the first court,
-      // the next two cover the next court, and so on. A name typed in the sheet's Referee column overrides this.
-      var nextRef = { Men: 0, Women: 0 };
-      var refs = slot.slice().sort(function (a, b) { return a[1] < b[1] ? -1 : 1; }).map(function (g) {
-        if (g[9]) return g[1] + ": " + g[9];
-        if (g[3] !== "Pool") return g[1] + ": TBD";
-        var pool = offBy[g[2]] || [];
-        var i = nextRef[g[2]];
-        var up = pool[i], line = pool[i + 1];
-        nextRef[g[2]] = i + 2;
-        var label = function (t) { return t ? code(t) + " " + shortName(t) : "TBD"; };
-        return g[1] + ": Up ref " + label(up) + " \u00b7 Line judge " + label(line);
-      });
+      var refs = refsFor(slot, offBy);
+      var cells = courts.map(function (c) {
+        var g = slot.filter(function (x) { return x[1] === c; })[0];
+        if (!g) return '<td class="empty">&ndash;</td>';
+        var isFinal = g[3] === "Final";
+        var played = g[6] !== "" && g[7] !== "";
+        var scoreLine = played
+          ? '<div class="slot-score">' + esc(g[6]) + " &ndash; " + esc(g[7]) + badgeFor(g) + "</div>"
+          : "";
+        return '<td data-k="' + esc(gameKey(g)) + '" class="' + (isFinal ? "slot-final" : "") + '">' +
+          '<div class="slot-div">' + esc(g[2]) + (isFinal ? " final" : "") + "</div>" +
+          '<div class="slot-team">' + swatch(g[4]) + esc(code(g[4])) + " " + esc(shortName(g[4])) + "</div>" +
+          '<div class="slot-vs">vs</div>' +
+          '<div class="slot-team">' + swatch(g[5]) + esc(code(g[5])) + " " + esc(shortName(g[5])) + "</div>" +
+          scoreLine + (refs[c] ? '<div class="slot-ref">' + esc(refs[c]) + "</div>" : "") + "</td>";
+      }).join("");
+
       return "<tr><td class=\"time\">" + esc(t) + "</td>" + cells +
-        '<td class="ref">' + (refs.length ? refs.map(function (r) { return esc(r); }).join("<br>") : "&ndash;") + "</td>" +
         '<td class="sitout">' + (sitting.length ? esc(sitting.join(" · ")) : "&ndash;") + "</td></tr>";
     }).join("");
 

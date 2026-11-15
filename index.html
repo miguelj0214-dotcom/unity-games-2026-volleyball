@@ -48,6 +48,8 @@
   table.courts th, table.courts td { border:1px solid var(--line); padding:8px 8px; vertical-align:top; }
   table.courts td.time { font-weight:bold; color:var(--navy); white-space:nowrap; }
   table.courts td.empty { color:#aab4bf; }
+  .announce { list-style:none; margin:0; padding:0; }
+  .announce li { padding:10px 12px; margin-bottom:8px; border-left:4px solid var(--gold); background:#fbf6e6; border-radius:6px; font-size:15px; font-weight:bold; color:var(--ink); }
   .slot-ref { margin-top:6px; padding-top:4px; border-top:1px dashed var(--line); font-size:12px; color:var(--muted); }
   .slot-div { font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
   .slot-match { font-weight:bold; margin-top:2px; }
@@ -156,6 +158,11 @@
     <ul class="feed" id="feed"><li class="pending">Points will appear here as they're entered.</li></ul>
   </section>
 
+  <section id="announce-section" style="display:none">
+    <h2>Live announcements</h2>
+    <ul class="announce" id="announce"></ul>
+  </section>
+
   <div class="banner" id="banner">Couldn't load the latest scores. Retrying every 30 seconds.</div>
 
   <section>
@@ -231,8 +238,12 @@
           if (!r.ok) throw new Error("HTTP " + r.status);
           return r.json();
         })
-        .then(function (all) { return all[name] || []; });
+        .then(function (all) { return all[name] ? all[name] : gvizTab(name); });
     }
+    return gvizTab(name);
+  }
+
+  function gvizTab(name) {
     var url = "https://docs.google.com/spreadsheets/d/" + SHEET_ID +
       "/gviz/tq?tqx=out:json&headers=0&sheet=" + encodeURIComponent(name);
     return fetch(url, { cache: "no-store" })
@@ -276,6 +287,15 @@
     ["8:30 PM", "Finals: Men's on Court 1, Women's on Court 3"],
     ["9:15 PM", "Awards"]
   ];
+
+  // Announcements tab: column A, one per row, shown in sheet order (top first). Hidden when empty.
+  function renderAnnouncements(rows) {
+    var items = (rows || []).slice(1).map(function (r) { return String(r[0] || "").trim(); }).filter(function (t) { return t !== ""; });
+    var section = document.getElementById("announce-section");
+    if (!items.length) { section.style.display = "none"; return; }
+    section.style.display = "";
+    document.getElementById("announce").innerHTML = items.map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("");
+  }
 
   function renderProgram(rows) {
     var list = programRows(rows);
@@ -649,12 +669,13 @@
   }
 
   function refresh() {
-    Promise.all([readTab("Schedule"), readTab("Leaderboard"), readTab("Bracket"), readTab("Teams")])
+    Promise.all([readTab("Schedule"), readTab("Leaderboard"), readTab("Bracket"), readTab("Teams"), readTab("Announcements").catch(function () { return []; })])
       .then(function (results) {
         var schedule = results[0];
         var games = gameRows(schedule);
         var split = splitLeaderboard(results[1]);
         var colors = shirtColors(results[3]);
+        renderAnnouncements(results[4]);
         renderProgram(schedule);
         renderCourtSchedule(games, split);
         renderGames(games);

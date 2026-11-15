@@ -560,7 +560,7 @@
   // "M1 Fremont" in Men games reads as "Fremont men"
   function teamLabel(name, division) { return shortName(name) + " " + String(division || "").toLowerCase(); }
   function pointsLine(name, division, n) {
-    return "<strong>" + esc(teamLabel(name, division)) + "</strong> scored " + n + (n === 1 ? " point" : " points");
+    return "\ud83c\udfd0 <strong>" + esc(teamLabel(name, division)) + "</strong> scored " + n + (n === 1 ? " point" : " points");
   }
 
   function addFeed(text) {

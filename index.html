@@ -124,7 +124,7 @@
 <main>
   <section id="feed-section">
     <h2><span class="live-dot"></span>Live updates</h2>
-    <p class="muted" style="margin:0 0 6px;font-size:13px">Every point is logged here with the time it was updated. Newest first.</p>
+    <p class="muted" style="margin:0 0 6px;font-size:13px">Every point is logged here with the time it was updated. Newest first. History is kept on this device.</p>
     <ul class="feed" id="feed"><li class="pending">Points will appear here as they're entered.</li></ul>
   </section>
 
@@ -447,6 +447,8 @@
   }
 
   var lastScores = null, lastPoints = null, feedItems = [];
+  var FEED_KEY = "unity2026-feed";
+  try { feedItems = JSON.parse(localStorage.getItem(FEED_KEY) || "[]") || []; } catch (e) { feedItems = []; }
 
   // Done is the Done column (K) on Matches, passed through Schedule. Live means scores are in but not done.
   function isDone(g) { return String(g[10] || "").toUpperCase() === "TRUE"; }
@@ -480,14 +482,22 @@
     });
   }
 
+  function renderFeed() {
+    var list = document.getElementById("feed");
+    if (!feedItems.length) return;
+    list.innerHTML = feedItems.map(function (f) {
+      return '<li><span class="t">' + esc(f.t) + "</span>" + f.text + "</li>";
+    }).join("");
+  }
+
   function addFeed(text) {
     var t = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
     feedItems.unshift({ t: t, text: text });
     feedItems = feedItems.slice(0, 200);
-    document.getElementById("feed").innerHTML = feedItems.map(function (f) {
-      return '<li><span class="t">' + esc(f.t) + "</span>" + f.text + "</li>";
-    }).join("");
+    try { localStorage.setItem(FEED_KEY, JSON.stringify(feedItems)); } catch (e) {}
+    renderFeed();
   }
+  renderFeed();
 
   // Confetti and a banner when a game gets a winner. Finals get more confetti.
   function celebrate(titleRaw, subRaw, big) {

@@ -303,14 +303,16 @@
   function refsFor(slot, offBy) {
     var nextRef = { Men: 0, Women: 0 };
     var out = {};
+    var label = function (t) { return t ? code(t) + " " + shortName(t) : "TBD"; };
     slot.slice().sort(function (a, b) { return a[1] < b[1] ? -1 : 1; }).forEach(function (g) {
       if (g[9]) { out[g[1]] = g[9]; return; }
       if (g[3] !== "Pool") { out[g[1]] = "TBD"; return; }
       var pool = offBy[g[2]] || [];
+      // One sitting-out team left for the division: that team's people cover this court.
+      if (pool.length === 1) { out[g[1]] = "Up ref + line judge: 3 people from " + label(pool[0]); return; }
       var i = nextRef[g[2]];
       var up = pool[i], line = pool[i + 1];
       nextRef[g[2]] = i + 2;
-      var label = function (t) { return t ? code(t) + " " + shortName(t) : "TBD"; };
       out[g[1]] = "Up ref " + label(up) + " \u00b7 Line judge " + label(line);
     });
     return out;

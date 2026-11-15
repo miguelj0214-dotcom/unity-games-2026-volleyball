@@ -326,7 +326,8 @@
         var i = nextRef[g[2]];
         var up = pool[i], line = pool[i + 1];
         nextRef[g[2]] = i + 2;
-        return g[1] + ": Up ref " + (up ? code(up) : "TBD") + " \u00b7 Line judge " + (line ? code(line) : "TBD");
+        var label = function (t) { return t ? code(t) + " " + shortName(t) : "TBD"; };
+        return g[1] + ": Up ref " + label(up) + " \u00b7 Line judge " + label(line);
       });
       return "<tr><td class=\"time\">" + esc(t) + "</td>" + cells +
         '<td class="ref">' + (refs.length ? refs.map(function (r) { return esc(r); }).join("<br>") : "&ndash;") + "</td>" +

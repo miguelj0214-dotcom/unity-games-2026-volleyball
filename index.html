@@ -11,7 +11,8 @@
   header { background:var(--navy); color:#fff; padding:20px 16px; }
   header h1 { margin:0 0 4px; font-size:22px; }
   .brand { display:flex; align-items:center; gap:12px; margin-bottom:6px; }
-  .brand img { width:64px; height:auto; background:#fff; border-radius:8px; padding:4px; flex:none; }
+  .brand img { width:120px; height:auto; background:#fff; border-radius:10px; padding:6px; flex:none; }
+  .brand .district { margin:2px 0 0; font-size:15px; font-weight:bold; letter-spacing:.03em; opacity:.95; }
   .brand h1 { margin:0; }
   header p { margin:0; opacity:.9; font-size:14px; }
   .status { display:inline-block; margin-top:10px; font-size:13px; padding:4px 10px; border-radius:12px; background:rgba(255,255,255,.15); }
@@ -115,6 +116,7 @@
   @media (max-width:700px) {
     header { padding:14px 12px; }
     header h1 { font-size:19px; }
+    .brand img { width:88px; }
     main { padding:10px; }
     section { padding:12px; margin-bottom:12px; border-radius:6px; }
     h2 { font-size:17px; }
@@ -137,7 +139,7 @@
 </head>
 <body>
 <header>
-  <div class="brand"><img src="logo.png" alt="Unity Games logo"><h1>Unity Games 2026 Volleyball</h1></div>
+  <div class="brand"><img src="logo.png" alt="Unity Games logo"><div><h1>Unity Games 2026 Volleyball</h1><p class="district">Silicon Valley, California</p></div></div>
   <p>Sunday, November 15, 2026 &middot; Milpitas Sports Center</p>
   <span class="status"><span class="dot" id="dot"></span><span id="status">Loading scores...</span></span>
   <p style="margin:10px 0 0;font-size:14px"><a href="https://docs.google.com/document/d/1Au_Z-ZPmr4Kc13m2-ESTXPP618zkIUpSmCE1GaWpil0/edit?usp=sharing" target="_blank" rel="noopener" style="color:#fff;font-weight:bold;text-decoration:underline">Athlete Packet</a></p>
